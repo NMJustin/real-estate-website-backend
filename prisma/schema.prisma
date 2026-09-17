@@ -1,0 +1,415 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Role {
+  id          Int     @id @default(autoincrement())
+  name        String  @unique
+  description String?
+  users       User[]
+
+  @@map("roles")
+}
+
+model User {
+  id           String    @id @default(cuid())
+  name         String?
+  email        String    @unique
+  phone        String?
+  passwordHash String    @map("password_hash")
+  roleId       Int       @map("role_id")
+  role         Role      @relation(fields: [roleId], references: [id])
+  isActive     Boolean   @default(true) @map("is_active")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  lastLoginAt  DateTime? @map("last_login_at")
+
+  agent             Agent?
+  inquiries         Inquiry[]
+  viewingRequests   ViewingRequest[]
+  valuationRequests ValuationRequest[]
+  listingRequests   ListingRequest[]
+  serviceRequests   ServiceRequest[]
+  contactMessages   ContactMessage[]
+  favorites         Favorite[]
+  articles          Article[]
+
+  @@map("users")
+}
+
+model Agent {
+  id              String   @id @default(cuid())
+  userId          String   @unique @map("user_id")
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name            String
+  slug            String   @unique
+  email           String?
+  phone           String?
+  profileImage    String?  @map("profile_image")
+  bio             String?
+  specialization  String?
+  licenseNumber   String?  @map("license_number")
+  yearsExperience Int?     @map("years_experience")
+  isActive        Boolean  @default(true) @map("is_active")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  properties      Property[]
+  inquiries       Inquiry[]
+  viewingRequests ViewingRequest[]
+
+  @@map("agents")
+}
+
+model PropertyCategory {
+  id          String     @id @default(cuid())
+  name        String     @unique
+  slug        String     @unique
+  description String?
+  isActive    Boolean    @default(true) @map("is_active")
+  createdAt   DateTime   @default(now()) @map("created_at")
+  updatedAt   DateTime   @updatedAt @map("updated_at")
+  properties  Property[]
+
+  @@map("property_categories")
+}
+
+model Property {
+  id                String            @id @default(cuid())
+  propertyId        String?           @unique @map("property_id")
+  title             String
+  slug              String            @unique
+  description       String?
+  categoryId        String?           @map("category_id")
+  category          PropertyCategory? @relation(fields: [categoryId], references: [id])
+  agentId           String?           @map("agent_id")
+  agent             Agent?            @relation(fields: [agentId], references: [id])
+  developmentId     String?           @map("development_id")
+  development       Development?      @relation(fields: [developmentId], references: [id])
+  propertyType      String            @default("RESIDENTIAL") @map("property_type")
+  transactionType   String            @default("SALE") @map("transaction_type")
+  price             Decimal?
+  currency          String?           @default("KES")
+  location          String?
+  district          String?
+  sector            String?
+  address           String?
+  latitude          Float?
+  longitude         Float?
+  size              Decimal?
+  sizeUnit          String?           @default("sqm") @map("size_unit")
+  bedrooms          Int?
+  bathrooms         Int?
+  status            String            @default("AVAILABLE")
+  publicationStatus String            @default("PUBLISHED") @map("publication_status")
+  isFeatured        Boolean           @default(false) @map("is_featured")
+  isNewDevelopment  Boolean           @default(false) @map("is_new_development")
+  listedAt          DateTime?         @map("listed_at")
+  createdAt         DateTime          @default(now()) @map("created_at")
+  updatedAt         DateTime          @updatedAt @map("updated_at")
+
+  propertyImages    PropertyImage[]
+  propertyFeatures  PropertyFeatureLink[]
+  inquiries         Inquiry[]
+  viewingRequests   ViewingRequest[]
+  valuationRequests ValuationRequest[]
+  listingRequests   ListingRequest[]
+  favorites         Favorite[]
+
+  @@map("properties")
+}
+
+model PropertyImage {
+  id           String   @id @default(cuid())
+  propertyId   String   @map("property_id")
+  property     Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  imageUrl     String   @map("image_url")
+  altText      String?  @map("alt_text")
+  displayOrder Int      @default(0) @map("display_order")
+  isPrimary    Boolean  @default(false) @map("is_primary")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@map("property_images")
+}
+
+model PropertyFeature {
+  id         String                @id @default(cuid())
+  name       String                @unique
+  slug       String                @unique
+  createdAt  DateTime              @default(now())
+  properties PropertyFeatureLink[]
+
+  @@map("property_features")
+}
+
+model PropertyFeatureLink {
+  propertyId String          @map("property_id")
+  property   Property        @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  featureId  String          @map("feature_id")
+  feature    PropertyFeature @relation(fields: [featureId], references: [id], onDelete: Cascade)
+
+  @@id([propertyId, featureId])
+  @@map("property_feature_links")
+}
+
+model Development {
+  id             String    @id @default(cuid())
+  name           String
+  slug           String    @unique
+  description    String?
+  location       String?
+  developerName  String?   @map("developer_name")
+  status         String?   @default("ACTIVE")
+  completionDate DateTime? @map("completion_date")
+  imageUrl       String?   @map("image_url")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  properties Property[]
+
+  @@map("developments")
+}
+
+model Inquiry {
+  id         String    @id @default(cuid())
+  propertyId String?   @map("property_id")
+  property   Property? @relation(fields: [propertyId], references: [id])
+  agentId    String?   @map("agent_id")
+  agent      Agent?    @relation(fields: [agentId], references: [id])
+  userId     String?   @map("user_id")
+  user       User?     @relation(fields: [userId], references: [id])
+  name       String
+  email      String
+  phone      String?
+  message    String
+  status     String    @default("NEW")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+
+  @@map("inquiries")
+}
+
+model ViewingRequest {
+  id            String    @id @default(cuid())
+  propertyId    String    @map("property_id")
+  property      Property  @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  userId        String?   @map("user_id")
+  user          User?     @relation(fields: [userId], references: [id])
+  agentId       String?   @map("agent_id")
+  agent         Agent?    @relation(fields: [agentId], references: [id])
+  name          String
+  email         String
+  phone         String?
+  preferredDate DateTime? @map("preferred_date")
+  preferredTime String?   @map("preferred_time")
+  message       String?
+  status        String    @default("PENDING")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  @@map("viewing_requests")
+}
+
+model ValuationRequest {
+  id             String    @id @default(cuid())
+  propertyId     String?   @map("property_id")
+  property       Property? @relation(fields: [propertyId], references: [id])
+  userId         String?   @map("user_id")
+  user           User?     @relation(fields: [userId], references: [id])
+  name           String
+  email          String
+  phone          String?
+  propertyType   String    @default("RESIDENTIAL") @map("property_type")
+  location       String
+  propertySize   Decimal?  @map("property_size")
+  bedrooms       Int?
+  bathrooms      Int?
+  description    String?
+  estimatedValue Decimal?  @map("estimated_value")
+  status         String    @default("NEW")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  @@map("valuation_requests")
+}
+
+model ListingRequest {
+  id              String    @id @default(cuid())
+  propertyId      String?   @map("property_id")
+  property        Property? @relation(fields: [propertyId], references: [id])
+  userId          String?   @map("user_id")
+  user            User?     @relation(fields: [userId], references: [id])
+  name            String
+  email           String
+  phone           String?
+  propertyType    String    @default("RESIDENTIAL") @map("property_type")
+  transactionType String    @default("SALE") @map("transaction_type")
+  location        String
+  description     String?
+  price           Decimal?
+  status          String    @default("SUBMITTED")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  @@map("listing_requests")
+}
+
+model Service {
+  id               String   @id @default(cuid())
+  name             String
+  slug             String   @unique
+  shortDescription String?  @map("short_description")
+  description      String?
+  imageUrl         String?  @map("image_url")
+  isActive         Boolean  @default(true) @map("is_active")
+  displayOrder     Int      @default(0) @map("display_order")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  requests ServiceRequest[]
+
+  @@map("services")
+}
+
+model ServiceRequest {
+  id        String   @id @default(cuid())
+  serviceId String   @map("service_id")
+  service   Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  userId    String?  @map("user_id")
+  user      User?    @relation(fields: [userId], references: [id])
+  name      String
+  email     String
+  phone     String?
+  message   String?
+  status    String   @default("NEW")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("service_requests")
+}
+
+model ArticleCategory {
+  id          String    @id @default(cuid())
+  name        String    @unique
+  slug        String    @unique
+  description String?
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  articles    Article[]
+
+  @@map("article_categories")
+}
+
+model Article {
+  id                String           @id @default(cuid())
+  title             String
+  slug              String           @unique
+  excerpt           String?
+  content           String
+  featuredImage     String?          @map("featured_image")
+  categoryId        String?          @map("category_id")
+  category          ArticleCategory? @relation(fields: [categoryId], references: [id])
+  authorId          String?          @map("author_id")
+  author            User?            @relation(fields: [authorId], references: [id])
+  publicationStatus String           @default("DRAFT") @map("publication_status")
+  publishedAt       DateTime?        @map("published_at")
+  createdAt         DateTime         @default(now()) @map("created_at")
+  updatedAt         DateTime         @updatedAt @map("updated_at")
+
+  @@map("articles")
+}
+
+model Faq {
+  id           String   @id @default(cuid())
+  question     String
+  answer       String
+  category     String?
+  displayOrder Int      @default(0) @map("display_order")
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@map("faqs")
+}
+
+model Testimonial {
+  id         String   @id @default(cuid())
+  name       String
+  role       String?
+  content    String   @map("content")
+  imageUrl   String?  @map("image_url")
+  rating     Int      @default(5)
+  isFeatured Boolean  @default(false) @map("is_featured")
+  isActive   Boolean  @default(true) @map("is_active")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  @@map("testimonials")
+}
+
+model ContactMessage {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  phone     String?
+  subject   String?
+  message   String
+  userId    String?  @map("user_id")
+  user      User?    @relation(fields: [userId], references: [id])
+  status    String   @default("NEW")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("contact_messages")
+}
+
+model SitePage {
+  id              String   @id @default(cuid())
+  title           String
+  slug            String   @unique
+  content         String?
+  pageType        String?  @map("page_type")
+  metaTitle       String?  @map("meta_title")
+  metaDescription String?  @map("meta_description")
+  isPublished     Boolean  @default(true) @map("is_published")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@map("site_pages")
+}
+
+model SiteSetting {
+  id              String   @id @default(cuid())
+  siteName        String?  @map("site_name")
+  logoUrl         String?  @map("logo_url")
+  faviconUrl      String?  @map("favicon_url")
+  email           String?
+  phone           String?
+  address         String?
+  facebookUrl     String?  @map("facebook_url")
+  instagramUrl    String?  @map("instagram_url")
+  xUrl            String?  @map("x_url")
+  linkedinUrl     String?  @map("linkedin_url")
+  defaultCurrency String?  @map("default_currency")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@map("site_settings")
+}
+
+model Favorite {
+  id         String   @id @default(cuid())
+  userId     String   @map("user_id")
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  propertyId String   @map("property_id")
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@unique([userId, propertyId])
+  @@map("favorites")
+}

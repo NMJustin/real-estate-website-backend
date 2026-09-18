@@ -1,0 +1,50 @@
+import type { Request, Response } from 'express';
+import { Prisma } from '@prisma/client';
+import prisma from '../lib/prisma.js';
+
+const optionalNumber = (value: unknown) => {
+  if (value === undefined || value === null || value === '') return undefined;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
+};
+
+const optionalInteger = (value: unknown) => {
+  const parsed = optionalNumber(value);
+  return parsed === undefined ? undefined : Math.trunc(parsed);
+};
+
+const stringValue = (value: unknown) => typeof value === 'string' && value.trim() ? value.trim() : undefined;
+
+export const createPropertySearch = async (req: Request, res: Response, next: (error: unknown) => void) => {
+  try {
+    const body = req.body as Record<string, unknown>;
+    const features = Array.isArray(body.features)
+      ? body.features.filter((feature): feature is string => typeof feature === 'string' && feature.trim() !== '')
+      : [];
+
+    const data: Prisma.PropertySearchUncheckedCreateInput = {
+      userId: req.user?.id,
+      email: stringValue(body.email),
+      location: stringValue(body.location),
+      propertyType: stringValue(body.propertyType),
+      transactionType: stringValue(body.transactionType),
+      minPrice: optionalNumber(body.minPrice),
+      maxPrice: optionalNumber(body.maxPrice),
+      minBedrooms: optionalInteger(body.minBedrooms),
+      maxBedrooms: optionalInteger(body.maxBedrooms),
+      minBathrooms: optionalInteger(body.minBathrooms),
+      maxBathrooms: optionalInteger(body.maxBathrooms),
+      minSize: optionalNumber(body.minSize),
+      maxSize: optionalNumber(body.maxSize),
+      sizeUnit: stringValue(body.sizeUnit),
+      availability: stringValue(body.availability),
+      furnishingStatus: stringValue(body.furnishingStatus),
+      features,
+    };
+
+    const search = await prisma.propertySearch.create({ data });
+    return res.status(201).json({ success: true, data: search });
+  } catch (error) {
+    return next(error);
+  }
+};

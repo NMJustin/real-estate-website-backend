@@ -38,6 +38,7 @@ model User {
   contactMessages   ContactMessage[]
   favorites         Favorite[]
   articles          Article[]
+  propertySearches  PropertySearch[]
 
   @@map("users")
 }
@@ -105,6 +106,7 @@ model Property {
   sizeUnit          String?           @default("sqm") @map("size_unit")
   bedrooms          Int?
   bathrooms         Int?
+  furnishingStatus  String?           @map("furnishing_status")
   status            String            @default("AVAILABLE")
   publicationStatus String            @default("PUBLISHED") @map("publication_status")
   isFeatured        Boolean           @default(false) @map("is_featured")
@@ -155,6 +157,33 @@ model PropertyFeatureLink {
 
   @@id([propertyId, featureId])
   @@map("property_feature_links")
+}
+
+model PropertySearch {
+  id                String   @id @default(cuid())
+  userId            String?  @map("user_id")
+  user              User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  email             String?
+  location          String?
+  propertyType      String?  @map("property_type")
+  transactionType   String?  @map("transaction_type")
+  minPrice          Decimal? @map("min_price")
+  maxPrice          Decimal? @map("max_price")
+  minBedrooms       Int?     @map("min_bedrooms")
+  maxBedrooms       Int?     @map("max_bedrooms")
+  minBathrooms      Int?     @map("min_bathrooms")
+  maxBathrooms      Int?     @map("max_bathrooms")
+  minSize           Decimal? @map("min_size")
+  maxSize           Decimal? @map("max_size")
+  sizeUnit          String?  @map("size_unit")
+  availability      String?
+  furnishingStatus  String?  @map("furnishing_status")
+  features          String[] @default([])
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  @@index([userId])
+  @@map("property_searches")
 }
 
 model Development {

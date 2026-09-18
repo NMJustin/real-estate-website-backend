@@ -16,6 +16,7 @@ import listingRoutes from './listingRoutes.js';
 import favoriteRoutes from './favoriteRoutes.js';
 import pageRoutes from './pageRoutes.js';
 import settingRoutes from './settingRoutes.js';
+import propertySearchRoutes from './propertySearchRoutes.js';
 
 const router = Router();
 
@@ -25,6 +26,7 @@ router.get('/health', (_req, res) => {
 
 router.use('/auth', authRoutes);
 router.use('/properties', propertyRoutes);
+router.use('/property-searches', propertySearchRoutes);
 router.use('/categories', categoryRoutes);
 router.use('/agents', agentRoutes);
 router.use('/services', serviceRoutes);

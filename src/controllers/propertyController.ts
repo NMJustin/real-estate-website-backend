@@ -8,6 +8,11 @@ const numberQuery = (value: unknown) => {
   return Number.isFinite(parsed) ? parsed : undefined;
 };
 
+const listQuery = (value: unknown) => {
+  if (typeof value !== 'string') return [];
+  return value.split(',').map((item) => item.trim()).filter(Boolean);
+};
+
 export const getProperties = async (req: Request, res: Response, next: (error: unknown) => void) => {
   try {
     const query = req.query;
@@ -19,7 +24,10 @@ export const getProperties = async (req: Request, res: Response, next: (error: u
     if (typeof query.sector === 'string') and.push({ sector: { contains: query.sector, mode: 'insensitive' } });
     if (typeof query.propertyType === 'string') where.propertyType = query.propertyType;
     if (typeof query.transactionType === 'string') where.transactionType = query.transactionType;
+    if (typeof query.category === 'string') where.category = { slug: query.category, isActive: true };
     if (typeof query.status === 'string') where.status = query.status;
+    if (typeof query.availability === 'string') where.status = query.availability;
+    if (typeof query.furnishingStatus === 'string') where.furnishingStatus = query.furnishingStatus;
     if (query.featured === 'true') where.isFeatured = true;
     if (query.newDevelopment === 'true') where.isNewDevelopment = true;
 
@@ -33,6 +41,17 @@ export const getProperties = async (req: Request, res: Response, next: (error: u
     const bathrooms = numberQuery(query.bathrooms);
     if (bedrooms !== undefined) where.bedrooms = { gte: bedrooms };
     if (bathrooms !== undefined) where.bathrooms = { gte: bathrooms };
+    const minBedrooms = numberQuery(query.minBedrooms);
+    const maxBedrooms = numberQuery(query.maxBedrooms);
+    const minBathrooms = numberQuery(query.minBathrooms);
+    const maxBathrooms = numberQuery(query.maxBathrooms);
+    if (minBedrooms !== undefined || maxBedrooms !== undefined) where.bedrooms = { ...(minBedrooms !== undefined ? { gte: minBedrooms } : {}), ...(maxBedrooms !== undefined ? { lte: maxBedrooms } : {}) };
+    if (minBathrooms !== undefined || maxBathrooms !== undefined) where.bathrooms = { ...(minBathrooms !== undefined ? { gte: minBathrooms } : {}), ...(maxBathrooms !== undefined ? { lte: maxBathrooms } : {}) };
+
+    const features = listQuery(query.features);
+    if (features.length) {
+      and.push(...features.map((feature) => ({ propertyFeatures: { some: { feature: { slug: feature } } } })));
+    }
     if (and.length) where.AND = and;
 
     const page = Math.max(1, numberQuery(query.page) || 1);
@@ -65,21 +84,28 @@ export const getPropertyBySlug = async (req: Request, res: Response, next: (erro
   }
 };
 
-export const getPropertiesByFilter = (filter: string, req: Request, res: Response) => {
-  res.json({
-    success: true,
-    message: `Get ${filter} properties route placeholder`,
-    filters: { ...req.query, preset: filter },
-  });
+export const getPropertiesByFilter = async (filter: string, req: Request, res: Response, next: (error: unknown) => void) => {
+  try {
+    const query = { ...req.query, ...(filter === 'for-sale' ? { transactionType: 'SALE' } : {}), ...(filter === 'for-rent' ? { transactionType: 'RENT' } : {}), ...(filter === 'for-lease' ? { transactionType: 'LEASE' } : {}), ...(filter === 'residential' ? { propertyType: 'RESIDENTIAL' } : {}), ...(filter === 'commercial' ? { propertyType: 'COMMERCIAL' } : {}), ...(filter === 'land' ? { propertyType: 'LAND' } : {}), ...(filter === 'new-developments' ? { newDevelopment: 'true' } : {}) };
+    req.query = query;
+    return getProperties(req, res, next);
+  } catch (error) {
+    return next(error);
+  }
 };
 
-export const getForSaleProperties = (req: Request, res: Response) => getPropertiesByFilter('for-sale', req, res);
-export const getForRentProperties = (req: Request, res: Response) => getPropertiesByFilter('for-rent', req, res);
-export const getForLeaseProperties = (req: Request, res: Response) => getPropertiesByFilter('for-lease', req, res);
-export const getResidentialProperties = (req: Request, res: Response) => getPropertiesByFilter('residential', req, res);
-export const getCommercialProperties = (req: Request, res: Response) => getPropertiesByFilter('commercial', req, res);
-export const getLandProperties = (req: Request, res: Response) => getPropertiesByFilter('land', req, res);
-export const getNewDevelopmentProperties = (req: Request, res: Response) => getPropertiesByFilter('new-developments', req, res);
+export const getForSaleProperties = (req: Request, res: Response, next: (error: unknown) => void) => getPropertiesByFilter('for-sale', req, res, next);
+export const getForRentProperties = (req: Request, res: Response, next: (error: unknown) => void) => getPropertiesByFilter('for-rent', req, res, next);
+export const getForLeaseProperties = (req: Request, res: Response, next: (error: unknown) => void) => getPropertiesByFilter('for-lease', req, res, next);
+export const getResidentialProperties = (req: Request, res: Response, next: (error: unknown) => void) => getPropertiesByFilter('residential', req, res, next);
+export const getCommercialProperties = (req: Request, res: Response, next: (error: unknown) => void) => getPropertiesByFilter('commercial', req, res, next);
+export const getLandProperties = (req: Request, res: Response, next: (error: unknown) => void) => getPropertiesByFilter('land', req, res, next);
+export const getNewDevelopmentProperties = (req: Request, res: Response, next: (error: unknown) => void) => getPropertiesByFilter('new-developments', req, res, next);
+
+export const getPropertiesByCategory = (req: Request, res: Response, next: (error: unknown) => void) => {
+  req.query.category = String(req.params.category);
+  return getProperties(req, res, next);
+};
 
 export const createProperty = async (req: Request, res: Response, next: (error: unknown) => void) => {
   try {

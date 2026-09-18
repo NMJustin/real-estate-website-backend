@@ -7,6 +7,7 @@ import {
 	getLandProperties,
 	getNewDevelopmentProperties,
 	getProperties,
+	getPropertiesByCategory,
 	getPropertyBySlug,
 	getResidentialProperties,
 } from '../controllers/propertyController.js';
@@ -21,6 +22,7 @@ router.get('/residential', getResidentialProperties);
 router.get('/commercial', getCommercialProperties);
 router.get('/land', getLandProperties);
 router.get('/new-developments', getNewDevelopmentProperties);
+router.get('/category/:category', getPropertiesByCategory);
 router.get('/:slug', getPropertyBySlug);
 
 export default router;

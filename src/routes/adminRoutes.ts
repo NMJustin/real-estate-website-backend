@@ -1,5 +1,7 @@
 import { Router } from 'express';
 import { getDashboard, getUsers } from '../controllers/adminController.js';
+import { requireAuth } from '../middleware/auth.js';
+import { authorize } from '../middleware/authorize.js';
 import adminPropertyRoutes from './adminPropertyRoutes.js';
 import adminArticleRoutes from './adminArticleRoutes.js';
 import adminFaqRoutes from './adminFaqRoutes.js';
@@ -15,6 +17,9 @@ import adminServiceRoutes from './adminServiceRoutes.js';
 import adminContactRoutes from './adminContactRoutes.js';
 
 const router = Router();
+
+// Apply authentication + admin role check to ALL admin routes
+router.use(requireAuth, authorize('admin'));
 
 router.get('/dashboard', getDashboard);
 router.get('/users', getUsers);

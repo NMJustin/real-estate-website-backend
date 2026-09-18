@@ -12,7 +12,7 @@ export const getViewings = async (_req: Request, res: Response, next: (error: un
 
 export const createViewing = async (req: Request, res: Response, next: (error: unknown) => void) => {
   try {
-    const viewing = await prisma.viewingRequest.create({ data: { ...req.body, propertyId: String(req.body.propertyId) } });
+    const viewing = await prisma.viewingRequest.create({ data: { ...req.body, propertyId: String(req.body.propertyId), preferredDate: req.body.preferredDate ? new Date(req.body.preferredDate) : undefined } });
     res.status(201).json({ success: true, data: viewing });
   } catch (error) {
     next(error);

@@ -17,16 +17,18 @@ import favoriteRoutes from './favoriteRoutes.js';
 import pageRoutes from './pageRoutes.js';
 import settingRoutes from './settingRoutes.js';
 import propertySearchRoutes from './propertySearchRoutes.js';
+import propertyMediaRoutes from './propertyMediaRoutes.js';
 
 const router = Router();
 
 router.get('/health', (_req, res) => {
-  res.json({ success: true, message: 'Nihohange Real Estate API is running' });
+  res.json({ success: true, message: 'Ingata Real Estate API is running' });
 });
 
 router.use('/auth', authRoutes);
 router.use('/properties', propertyRoutes);
 router.use('/property-searches', propertySearchRoutes);
+router.use('/property-media', propertyMediaRoutes);
 router.use('/categories', categoryRoutes);
 router.use('/agents', agentRoutes);
 router.use('/services', serviceRoutes);

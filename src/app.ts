@@ -11,7 +11,7 @@ app.use(express.json());
 app.get('/', (_req, res) => {
 	res.json({
 		success: true,
-		message: 'Nihohange Real Estate API is running',
+		message: 'Ingata Real Estate API is running',
 		health: '/api/v1/health',
 	});
 });

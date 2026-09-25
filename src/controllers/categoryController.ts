@@ -2,7 +2,18 @@ import type { Request, Response } from 'express';
 import prisma from '../lib/prisma.js';
 
 export const getCategories = async (_req: Request, res: Response, next: (error: unknown) => void) => {
-  try { const categories = await prisma.propertyCategory.findMany({ where: { isActive: true }, orderBy: { name: 'asc' } }); res.json({ success: true, data: categories }); } catch (error) { next(error); }
+  try { 
+    const categories = await prisma.propertyCategory.findMany({ 
+      where: { isActive: true }, 
+      orderBy: { name: 'asc' },
+      include: {
+        _count: {
+          select: { properties: true }
+        }
+      }
+    }); 
+    res.json({ success: true, data: categories }); 
+  } catch (error) { next(error); }
 };
 
 export const createCategory = async (req: Request, res: Response, next: (error: unknown) => void) => {

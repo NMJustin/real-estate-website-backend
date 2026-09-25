@@ -25,6 +25,7 @@ model User {
   roleId       Int       @map("role_id")
   role         Role      @relation(fields: [roleId], references: [id])
   isActive     Boolean   @default(true) @map("is_active")
+  canUploadPropertyMedia Boolean @default(false) @map("can_upload_property_media")
   createdAt    DateTime  @default(now()) @map("created_at")
   updatedAt    DateTime  @updatedAt @map("updated_at")
   lastLoginAt  DateTime? @map("last_login_at")
@@ -72,6 +73,7 @@ model PropertyCategory {
   name        String     @unique
   slug        String     @unique
   description String?
+  imageUrl    String?    @map("image_url")
   isActive    Boolean    @default(true) @map("is_active")
   createdAt   DateTime   @default(now()) @map("created_at")
   updatedAt   DateTime   @updatedAt @map("updated_at")
@@ -95,17 +97,22 @@ model Property {
   propertyType      String            @default("RESIDENTIAL") @map("property_type")
   transactionType   String            @default("SALE") @map("transaction_type")
   price             Decimal?
-  currency          String?           @default("KES")
+  currency          String?           @default("RWF")
   location          String?
   district          String?
   sector            String?
+  neighborhood      String?
+  area              String?
   address           String?
+  nearbyLandmarks   String?           @map("nearby_landmarks")
+  locationDescription String?         @map("location_description")
   latitude          Float?
   longitude         Float?
   size              Decimal?
   sizeUnit          String?           @default("sqm") @map("size_unit")
   bedrooms          Int?
   bathrooms         Int?
+  parking           Int?
   furnishingStatus  String?           @map("furnishing_status")
   status            String            @default("AVAILABLE")
   publicationStatus String            @default("PUBLISHED") @map("publication_status")
@@ -117,6 +124,7 @@ model Property {
 
   propertyImages    PropertyImage[]
   propertyFeatures  PropertyFeatureLink[]
+  amenities         String[]          @default([])
   inquiries         Inquiry[]
   viewingRequests   ViewingRequest[]
   valuationRequests ValuationRequest[]
@@ -131,6 +139,7 @@ model PropertyImage {
   propertyId   String   @map("property_id")
   property     Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
   imageUrl     String   @map("image_url")
+  mediaType    String   @default("IMAGE") @map("media_type")
   altText      String?  @map("alt_text")
   displayOrder Int      @default(0) @map("display_order")
   isPrimary    Boolean  @default(false) @map("is_primary")

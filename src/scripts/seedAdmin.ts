@@ -35,6 +35,12 @@ async function main() {
     create: { name: 'agent', description: 'Agent user access' },
   });
 
+  await prisma.role.upsert({
+    where: { name: 'property_owner' },
+    update: {},
+    create: { name: 'property_owner', description: 'Property owner with admin-approved media upload access' },
+  });
+
   console.log('✅ Roles created: admin, user, agent');
 
   // 2. Create admin user

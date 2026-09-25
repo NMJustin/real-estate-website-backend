@@ -23,7 +23,26 @@ export const getProperties = async (req: Request, res: Response, next: (error: u
     if (typeof query.district === 'string') and.push({ district: { contains: query.district, mode: 'insensitive' } });
     if (typeof query.sector === 'string') and.push({ sector: { contains: query.sector, mode: 'insensitive' } });
     if (typeof query.propertyType === 'string') where.propertyType = query.propertyType;
-    if (typeof query.transactionType === 'string') where.transactionType = query.transactionType;
+    if (typeof query.transactionType === 'string') {
+      const type = query.transactionType.toUpperCase();
+      if (type === 'BUY') {
+        where.transactionType = 'SALE';
+      } else if (type === 'RENT') {
+        where.transactionType = 'RENT';
+      } else {
+        where.transactionType = type;
+      }
+    }
+    
+    if (typeof query.priceRange === 'string') {
+      const parts = query.priceRange.split('-');
+      if (parts.length === 2) {
+        query.minPrice = parts[0];
+        query.maxPrice = parts[1];
+      } else if (query.priceRange.endsWith('+')) {
+        query.minPrice = query.priceRange.replace('+', '');
+      }
+    }
     if (typeof query.category === 'string') where.category = { slug: query.category, isActive: true };
     if (typeof query.status === 'string') where.status = query.status;
     if (typeof query.availability === 'string') where.status = query.availability;
@@ -86,7 +105,7 @@ export const getPropertyBySlug = async (req: Request, res: Response, next: (erro
 
 export const getPropertiesByFilter = async (filter: string, req: Request, res: Response, next: (error: unknown) => void) => {
   try {
-    const query = { ...req.query, ...(filter === 'for-sale' ? { transactionType: 'SALE' } : {}), ...(filter === 'for-rent' ? { transactionType: 'RENT' } : {}), ...(filter === 'for-lease' ? { transactionType: 'LEASE' } : {}), ...(filter === 'residential' ? { propertyType: 'RESIDENTIAL' } : {}), ...(filter === 'commercial' ? { propertyType: 'COMMERCIAL' } : {}), ...(filter === 'land' ? { propertyType: 'LAND' } : {}), ...(filter === 'new-developments' ? { newDevelopment: 'true' } : {}) };
+    const query = { ...req.query, ...(filter === 'for-sale' ? { transactionType: 'SALE' } : {}), ...(filter === 'for-rent' ? { transactionType: 'RENT' } : {}), ...(filter === 'for-lease' ? { transactionType: 'LEASE' } : {}), ...(filter === 'residential' ? { propertyType: 'RESIDENTIAL' } : {}), ...(filter === 'commercial' ? { propertyType: 'COMMERCIAL' } : {}), ...(filter === 'apartments' ? { propertyType: 'APARTMENTS' } : {}), ...(filter === 'houses' ? { propertyType: 'HOUSES' } : {}), ...(filter === 'land' ? { propertyType: 'LAND' } : {}), ...(filter === 'offices' ? { propertyType: 'OFFICES' } : {}), ...(filter === 'warehouses' ? { propertyType: 'WAREHOUSES' } : {}), ...(filter === 'new-developments' ? { newDevelopment: 'true' } : {}) };
     req.query = query;
     return getProperties(req, res, next);
   } catch (error) {
@@ -99,7 +118,11 @@ export const getForRentProperties = (req: Request, res: Response, next: (error: 
 export const getForLeaseProperties = (req: Request, res: Response, next: (error: unknown) => void) => getPropertiesByFilter('for-lease', req, res, next);
 export const getResidentialProperties = (req: Request, res: Response, next: (error: unknown) => void) => getPropertiesByFilter('residential', req, res, next);
 export const getCommercialProperties = (req: Request, res: Response, next: (error: unknown) => void) => getPropertiesByFilter('commercial', req, res, next);
+export const getApartmentsProperties = (req: Request, res: Response, next: (error: unknown) => void) => getPropertiesByFilter('apartments', req, res, next);
+export const getHousesProperties = (req: Request, res: Response, next: (error: unknown) => void) => getPropertiesByFilter('houses', req, res, next);
 export const getLandProperties = (req: Request, res: Response, next: (error: unknown) => void) => getPropertiesByFilter('land', req, res, next);
+export const getOfficesProperties = (req: Request, res: Response, next: (error: unknown) => void) => getPropertiesByFilter('offices', req, res, next);
+export const getWarehousesProperties = (req: Request, res: Response, next: (error: unknown) => void) => getPropertiesByFilter('warehouses', req, res, next);
 export const getNewDevelopmentProperties = (req: Request, res: Response, next: (error: unknown) => void) => getPropertiesByFilter('new-developments', req, res, next);
 
 export const getPropertiesByCategory = (req: Request, res: Response, next: (error: unknown) => void) => {

@@ -84,7 +84,7 @@ export const getUsers = async (req: Request, res: Response) => {
         orderBy: { createdAt: 'desc' },
         select: {
           id: true, name: true, email: true, phone: true,
-          isActive: true, createdAt: true, lastLoginAt: true,
+          isActive: true, canUploadPropertyMedia: true, createdAt: true, lastLoginAt: true,
           role: { select: { name: true } },
         },
       }),
@@ -98,5 +98,19 @@ export const getUsers = async (req: Request, res: Response) => {
     });
   } catch (error) {
     return res.status(500).json({ success: false, message: 'Failed to fetch users.' });
+  }
+};
+
+export const updateUserMediaPermission = async (req: Request, res: Response) => {
+  const enabled = req.body?.canUploadPropertyMedia;
+  if (typeof enabled !== 'boolean') return res.status(400).json({ success: false, message: 'canUploadPropertyMedia must be true or false.' });
+  try {
+    const user = await prisma.user.findUnique({ where: { id: String(req.params.id) }, include: { role: true } });
+    if (!user) return res.status(404).json({ success: false, message: 'User not found.' });
+    if (!['agent', 'property_owner'].includes(user.role.name)) return res.status(400).json({ success: false, message: 'Only agents and property owners can receive media upload permission.' });
+    const updated = await prisma.user.update({ where: { id: user.id }, data: { canUploadPropertyMedia: enabled }, select: { id: true, canUploadPropertyMedia: true } });
+    return res.json({ success: true, data: updated });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: 'Failed to update media upload permission.' });
   }
 };

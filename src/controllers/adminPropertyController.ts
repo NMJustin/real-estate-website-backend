@@ -5,11 +5,15 @@ const propertyInclude = { agent: { select: { id: true, name: true } }, category:
 const toSlug = (value: string) => value.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
 const optionalString = (value: unknown) => typeof value === 'string' && value.trim() ? value.trim() : null;
 const optionalNumber = (value: unknown) => value === '' || value === undefined || value === null || !Number.isFinite(Number(value)) ? null : Number(value);
-const imageData = (images: unknown) => Array.isArray(images) ? images.filter((value): value is string => typeof value === 'string' && value.trim().length > 0).map((imageUrl, index) => ({ imageUrl: imageUrl.trim(), displayOrder: index, isPrimary: index === 0 })) : [];
+const imageData = (images: unknown) => Array.isArray(images)
+  ? images.map((value) => typeof value === 'string' ? { url: value, mediaType: 'IMAGE' } : value)
+    .filter((value): value is { url: string; mediaType?: string } => typeof value === 'object' && value !== null && typeof value.url === 'string' && value.url.trim().length > 0)
+    .map((value, index) => ({ imageUrl: value.url.trim(), mediaType: value.mediaType === 'VIDEO' ? 'VIDEO' : 'IMAGE', displayOrder: index, isPrimary: index === 0 }))
+  : [];
 
 const buildPropertyData = (body: Record<string, unknown>) => ({
   title: String(body.title || '').trim(), description: optionalString(body.description), categoryId: optionalString(body.categoryId), agentId: optionalString(body.agentId),
-  propertyType: String(body.propertyType || 'RESIDENTIAL'), transactionType: String(body.transactionType || 'SALE'), price: optionalNumber(body.price), currency: optionalString(body.currency) || 'KES',
+  propertyType: String(body.propertyType || 'RESIDENTIAL'), transactionType: String(body.transactionType || 'SALE'), price: optionalNumber(body.price), currency: optionalString(body.currency) || 'RWF',
   location: optionalString(body.location), district: optionalString(body.district), sector: optionalString(body.sector), address: optionalString(body.address), bedrooms: optionalNumber(body.bedrooms), bathrooms: optionalNumber(body.bathrooms),
   size: optionalNumber(body.size), sizeUnit: optionalString(body.sizeUnit) || 'sqm', furnishingStatus: optionalString(body.furnishingStatus), status: String(body.status || 'AVAILABLE'), publicationStatus: String(body.publicationStatus || 'DRAFT'),
   isFeatured: Boolean(body.isFeatured), isNewDevelopment: Boolean(body.isNewDevelopment),

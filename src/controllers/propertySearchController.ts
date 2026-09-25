@@ -22,20 +22,42 @@ export const createPropertySearch = async (req: Request, res: Response, next: (e
       ? body.features.filter((feature): feature is string => typeof feature === 'string' && feature.trim() !== '')
       : [];
 
-    const data: Prisma.PropertySearchUncheckedCreateInput = {
-      userId: req.user?.id,
-      email: stringValue(body.email),
-      location: stringValue(body.location),
-      propertyType: stringValue(body.propertyType),
-      transactionType: stringValue(body.transactionType),
-      minPrice: optionalNumber(body.minPrice),
-      maxPrice: optionalNumber(body.maxPrice),
-      minBedrooms: optionalInteger(body.minBedrooms),
-      maxBedrooms: optionalInteger(body.maxBedrooms),
-      minBathrooms: optionalInteger(body.minBathrooms),
-      maxBathrooms: optionalInteger(body.maxBathrooms),
-      minSize: optionalNumber(body.minSize),
-      maxSize: optionalNumber(body.maxSize),
+      let minPrice = optionalNumber(body.minPrice);
+      let maxPrice = optionalNumber(body.maxPrice);
+      
+      if (typeof body.priceRange === 'string') {
+        const parts = body.priceRange.split('-');
+        if (parts.length === 2) {
+          minPrice = optionalNumber(parts[0]);
+          maxPrice = optionalNumber(parts[1]);
+        } else if (body.priceRange.endsWith('+')) {
+          minPrice = optionalNumber(body.priceRange.replace('+', ''));
+        }
+      }
+
+      let transactionType = stringValue(body.transactionType);
+      if (transactionType) {
+        const type = transactionType.toUpperCase();
+        if (type === 'BUY') transactionType = 'SALE';
+        else if (type === 'RENT') transactionType = 'RENT';
+      }
+
+      const minBedrooms = optionalInteger(body.minBedrooms) ?? optionalInteger(body.bedrooms);
+
+      const data: Prisma.PropertySearchUncheckedCreateInput = {
+        userId: req.user?.id,
+        email: stringValue(body.email),
+        location: stringValue(body.location),
+        propertyType: stringValue(body.propertyType),
+        transactionType,
+        minPrice,
+        maxPrice,
+        minBedrooms,
+        maxBedrooms: optionalInteger(body.maxBedrooms),
+        minBathrooms: optionalInteger(body.minBathrooms),
+        maxBathrooms: optionalInteger(body.maxBathrooms),
+        minSize: optionalNumber(body.minSize),
+        maxSize: optionalNumber(body.maxSize),
       sizeUnit: stringValue(body.sizeUnit),
       availability: stringValue(body.availability),
       furnishingStatus: stringValue(body.furnishingStatus),

@@ -6,74 +6,87 @@
  */
 
 import bcrypt from 'bcryptjs';
-import { PrismaClient } from '@prisma/client';
+import AppDataSource from '../lib/typeorm.js';
+import { Role } from '../entities/Role.js';
+import { User } from '../entities/User.js';
 import dotenv from 'dotenv';
 
 dotenv.config();
 
-const prisma = new PrismaClient();
-
 async function main() {
   console.log('🌱 Seeding roles and admin user...');
 
+  await AppDataSource.initialize();
+  console.log('Database connected');
+
+  const roleRepo = AppDataSource.getRepository(Role);
+  const userRepo = AppDataSource.getRepository(User);
+
   // 1. Upsert roles
-  const adminRole = await prisma.role.upsert({
-    where: { name: 'admin' },
-    update: {},
-    create: { name: 'admin', description: 'Full system access' },
-  });
+  const roleNames = [
+    { name: 'admin', description: 'Full system access' },
+    { name: 'user', description: 'Standard user access' },
+    { name: 'agent', description: 'Agent user access' },
+    { name: 'property_owner', description: 'Property owner with admin-approved media upload access' },
+    { name: 'property_manager', description: 'Property manager with listing and inquiry management access' },
+    { name: 'content_editor', description: 'Content editor with article and page management access' },
+  ];
 
-  await prisma.role.upsert({
-    where: { name: 'user' },
-    update: {},
-    create: { name: 'user', description: 'Standard user access' },
-  });
+  let adminRole: Role | null = null;
 
-  await prisma.role.upsert({
-    where: { name: 'agent' },
-    update: {},
-    create: { name: 'agent', description: 'Agent user access' },
-  });
+  for (const roleData of roleNames) {
+    let role = await roleRepo.findOne({ where: { name: roleData.name } });
+    if (!role) {
+      role = roleRepo.create(roleData);
+      await roleRepo.save(role);
+      console.log(`✅ Role created: ${roleData.name}`);
+    } else {
+      console.log(`ℹ️  Role already exists: ${roleData.name}`);
+    }
 
-  await prisma.role.upsert({
-    where: { name: 'property_owner' },
-    update: {},
-    create: { name: 'property_owner', description: 'Property owner with admin-approved media upload access' },
-  });
+    if (roleData.name === 'admin') {
+      adminRole = role;
+    }
+  }
 
-  console.log('✅ Roles created: admin, user, agent');
+  console.log('✅ Roles ensured: admin, user, agent, property_owner, property_manager, content_editor');
 
   // 2. Create admin user
-  const adminEmail = 'admin@nihohange.com';
+  const adminEmail = 'admin@ingata.com';
   const adminPassword = 'Admin@2026!';
 
-  const existing = await prisma.user.findUnique({ where: { email: adminEmail } });
+  const existing = await userRepo.findOne({ where: { email: adminEmail } });
+  if (!adminRole) {
+    throw new Error('Admin role not found');
+  }
 
   if (existing) {
-    console.log(`ℹ️  Admin user already exists: ${adminEmail}`);
+    existing.passwordHash = await bcrypt.hash(adminPassword, 12);
+    existing.roleId = adminRole.id;
+    existing.isActive = true;
+    await userRepo.save(existing);
+    console.log(`✅ Admin user credentials reset: ${adminEmail}`);
   } else {
     const passwordHash = await bcrypt.hash(adminPassword, 12);
-    await prisma.user.create({
-      data: {
-        name: 'Super Admin',
-        email: adminEmail,
-        passwordHash,
-        roleId: adminRole.id,
-        isActive: true,
-      },
+    const adminUser = userRepo.create({
+      id: crypto.randomUUID(),
+      name: 'Super Admin',
+      email: adminEmail,
+      passwordHash,
+      roleId: adminRole.id,
+      isActive: true,
     });
+    await userRepo.save(adminUser);
     console.log('✅ Admin user created!');
     console.log(`   Email:    ${adminEmail}`);
-    console.log(`   Password: ${adminPassword}`);
     console.log('   ⚠️  Change this password after first login!');
   }
+
+  await AppDataSource.destroy();
 }
 
 main()
   .catch((e) => {
     console.error('❌ Seed failed:', e);
     process.exit(1);
-  })
-  .finally(async () => {
-    await prisma.$disconnect();
   });

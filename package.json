@@ -7,12 +7,14 @@
         "dev": "tsx watch src/server.ts",
         "build": "tsc",
         "start": "node dist/server.js",
-        "prisma:generate": "prisma generate",
-        "prisma:migrate": "prisma migrate dev",
-        "prisma:validate": "prisma validate"
+        "migration:run": "npm run build && typeorm migration:run -d dist/data-source.js",
+        "seed": "npm run build && node dist/seed.js",
+        "fix-schema": "npm run build && node dist/fix-schema.js"
     },
     "dependencies": {
-        "@prisma/client": "^5.22.0",
+        "@supabase/server": "^1.9.0",
+        "@supabase/ssr": "^0.12.7",
+        "@supabase/supabase-js": "^2.117.2",
         "@types/multer": "^2.2.0",
         "bcryptjs": "^3.0.3",
         "cors": "^2.8.5",
@@ -20,9 +22,11 @@
         "express": "^4.21.2",
         "jsonwebtoken": "^9.0.3",
         "multer": "^2.4.0",
-        "prisma": "^5.22.0",
+        "pg": "^8.23.1",
+        "reflect-metadata": "^0.2.2",
         "swagger-jsdoc": "^6.3.0",
-        "swagger-ui-express": "^5.0.1"
+        "swagger-ui-express": "^5.0.1",
+        "typeorm": "^1.1.1"
     },
     "devDependencies": {
         "@types/bcryptjs": "^2.4.6",

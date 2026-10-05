@@ -1,7 +1,9 @@
 import type { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import prisma from '../lib/prisma.js';
+import { AppDataSource } from '../lib/typeorm.js';
+import { User } from '../entities/User.js';
+import { Role } from '../entities/Role.js';
 
 const JWT_SECRET = process.env.JWT_SECRET as string;
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
@@ -15,10 +17,10 @@ export const adminLogin = async (req: Request, res: Response) => {
       return res.status(400).json({ success: false, message: 'Email and password are required.' });
     }
 
-    // Find user with their role
-    const user = await prisma.user.findUnique({
+    const userRepo = AppDataSource.getRepository(User);
+    const user = await userRepo.findOne({
       where: { email: String(email) },
-      include: { role: true },
+      relations: { role: true },
     });
 
     if (!user) {
@@ -30,7 +32,7 @@ export const adminLogin = async (req: Request, res: Response) => {
     }
 
     // Require admin role
-    if (user.role.name !== 'admin') {
+    if (user.role.name.toLowerCase() !== 'admin') {
       return res.status(403).json({ success: false, message: 'Access denied. Admin privileges required.' });
     }
 
@@ -41,10 +43,8 @@ export const adminLogin = async (req: Request, res: Response) => {
     }
 
     // Update last login timestamp
-    await prisma.user.update({
-      where: { id: user.id },
-      data: { lastLoginAt: new Date() },
-    });
+    user.lastLoginAt = new Date();
+    await userRepo.save(user);
 
     // Sign JWT
     const token = jwt.sign(
@@ -81,9 +81,10 @@ export const login = async (req: Request, res: Response) => {
       return res.status(400).json({ success: false, message: 'Email and password are required.' });
     }
 
-    const user = await prisma.user.findUnique({
+    const userRepo = AppDataSource.getRepository(User);
+    const user = await userRepo.findOne({
       where: { email: String(email) },
-      include: { role: true },
+      relations: { role: true },
     });
 
     if (!user) {
@@ -99,7 +100,8 @@ export const login = async (req: Request, res: Response) => {
       return res.status(401).json({ success: false, message: 'Invalid email or password.' });
     }
 
-    await prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
+    user.lastLoginAt = new Date();
+    await userRepo.save(user);
 
     const token = jwt.sign(
       { id: user.id, email: user.email, role: user.role.name },
@@ -125,32 +127,44 @@ export const register = async (req: Request, res: Response) => {
       return res.status(400).json({ success: false, message: 'Email and password are required.' });
     }
 
-    const existing = await prisma.user.findUnique({ where: { email: String(email) } });
+    const userRepo = AppDataSource.getRepository(User);
+    const roleRepo = AppDataSource.getRepository(Role);
+
+    const existing = await userRepo.findOne({ where: { email: String(email) } });
     if (existing) {
       return res.status(409).json({ success: false, message: 'An account with this email already exists.' });
     }
 
     // Default to 'user' role (id: 2; seed accordingly)
-    const userRole = await prisma.role.findFirst({ where: { name: 'user' } });
+    const userRole = await roleRepo.findOne({ where: { name: 'user' } });
     if (!userRole) {
       return res.status(500).json({ success: false, message: 'Default role not found. Contact admin.' });
     }
 
     const passwordHash = await bcrypt.hash(String(password), 12);
-    const user = await prisma.user.create({
-      data: { name, email, phone, passwordHash, roleId: userRole.id },
-      include: { role: true },
+    const user = userRepo.create({
+      name,
+      email,
+      phone,
+      passwordHash,
+      roleId: userRole.id,
+    });
+    const savedUser = await userRepo.save(user);
+
+    const userWithRole = await userRepo.findOne({
+      where: { id: savedUser.id },
+      relations: { role: true },
     });
 
     const token = jwt.sign(
-      { id: user.id, email: user.email, role: user.role.name },
+      { id: savedUser.id, email: savedUser.email, role: userWithRole?.role.name },
       JWT_SECRET,
       { expiresIn: JWT_EXPIRES_IN } as jwt.SignOptions
     );
 
     return res.status(201).json({
       success: true,
-      data: { token, user: { id: user.id, name: user.name, email: user.email, role: user.role.name } },
+      data: { token, user: { id: savedUser.id, name: savedUser.name, email: savedUser.email, role: userWithRole?.role.name } },
     });
   } catch (error) {
     return res.status(500).json({ success: false, message: 'Internal server error.' });
@@ -171,16 +185,30 @@ export const getMe = async (req: Request, res: Response) => {
       return res.status(401).json({ success: false, message: 'Not authenticated.' });
     }
 
-    const user = await prisma.user.findUnique({
+    const userRepo = AppDataSource.getRepository(User);
+    const user = await userRepo.findOne({
       where: { id: userId },
-      select: { id: true, name: true, email: true, phone: true, isActive: true, createdAt: true, role: { select: { name: true } } },
+      relations: { role: true },
     });
 
     if (!user) {
       return res.status(404).json({ success: false, message: 'User not found.' });
     }
 
-    return res.json({ success: true, data: user });
+    return res.json({
+      success: true,
+      data: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        isActive: user.isActive,
+        createdAt: user.createdAt,
+        role: {
+          name: user.role.name,
+        },
+      },
+    });
   } catch (error) {
     return res.status(500).json({ success: false, message: 'Internal server error.' });
   }
@@ -195,13 +223,26 @@ export const updateProfile = async (req: Request, res: Response) => {
     }
 
     const { name, phone } = req.body;
-    const user = await prisma.user.update({
-      where: { id: userId },
-      data: { name, phone },
-      select: { id: true, name: true, email: true, phone: true },
-    });
+    const userRepo = AppDataSource.getRepository(User);
+    const user = await userRepo.findOne({ where: { id: userId } });
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found.' });
+    }
 
-    return res.json({ success: true, data: user });
+    if (name !== undefined) user.name = name;
+    if (phone !== undefined) user.phone = phone;
+
+    const updatedUser = await userRepo.save(user);
+
+    return res.json({
+      success: true,
+      data: {
+        id: updatedUser.id,
+        name: updatedUser.name,
+        email: updatedUser.email,
+        phone: updatedUser.phone,
+      },
+    });
   } catch (error) {
     return res.status(500).json({ success: false, message: 'Internal server error.' });
   }

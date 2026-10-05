@@ -1,6 +1,13 @@
 import type { Request, Response } from 'express';
-import { Prisma } from '@prisma/client';
-import prisma from '../lib/prisma.js';
+import { AppDataSource } from '../lib/typeorm.js';
+import { Property } from '../entities/Property.js';
+import { PropertyCategory } from '../entities/PropertyCategory.js';
+import { Agent } from '../entities/Agent.js';
+import { Development } from '../entities/Development.js';
+import { PropertyImage } from '../entities/PropertyImage.js';
+import { PropertyFeatureLink } from '../entities/PropertyFeatureLink.js';
+import { PropertyFeature } from '../entities/PropertyFeature.js';
+import { Like, In, Between } from 'typeorm';
 
 const numberQuery = (value: unknown) => {
   if (typeof value !== 'string' || value.trim() === '') return undefined;
@@ -16,24 +23,37 @@ const listQuery = (value: unknown) => {
 export const getProperties = async (req: Request, res: Response, next: (error: unknown) => void) => {
   try {
     const query = req.query;
-    const where: Prisma.PropertyWhereInput = {};
-    const and: Prisma.PropertyWhereInput[] = [];
+    const propertyRepo = AppDataSource.getRepository(Property);
+    const categoryRepo = AppDataSource.getRepository(PropertyCategory);
 
-    if (typeof query.location === 'string') and.push({ location: { contains: query.location, mode: 'insensitive' } });
-    if (typeof query.district === 'string') and.push({ district: { contains: query.district, mode: 'insensitive' } });
-    if (typeof query.sector === 'string') and.push({ sector: { contains: query.sector, mode: 'insensitive' } });
-    if (typeof query.propertyType === 'string') where.propertyType = query.propertyType;
+    const qb = propertyRepo.createQueryBuilder('property')
+      .leftJoinAndSelect('property.category', 'category')
+      .leftJoinAndSelect('property.agent', 'agent')
+      .leftJoinAndSelect('property.development', 'development')
+      .leftJoinAndSelect('property.propertyImages', 'propertyImages')
+      .leftJoinAndSelect('property.propertyFeatures', 'propertyFeatures')
+      .leftJoinAndSelect('propertyFeatures.feature', 'feature');
+
+    qb.andWhere('property.publicationStatus = :publicationStatus', { publicationStatus: 'PUBLISHED' });
+
+    if (typeof query.location === 'string') {
+      qb.andWhere('LOWER(property.location) LIKE LOWER(:location)', { location: `%${query.location}%` });
+    }
+    if (typeof query.district === 'string') {
+      qb.andWhere('LOWER(property.district) LIKE LOWER(:district)', { district: `%${query.district}%` });
+    }
+    if (typeof query.sector === 'string') {
+      qb.andWhere('LOWER(property.sector) LIKE LOWER(:sector)', { sector: `%${query.sector}%` });
+    }
+    if (typeof query.propertyType === 'string') {
+      qb.andWhere('property.propertyType = :propertyType', { propertyType: query.propertyType });
+    }
     if (typeof query.transactionType === 'string') {
       const type = query.transactionType.toUpperCase();
-      if (type === 'BUY') {
-        where.transactionType = 'SALE';
-      } else if (type === 'RENT') {
-        where.transactionType = 'RENT';
-      } else {
-        where.transactionType = type;
-      }
+      const transactionType = type === 'BUY' ? 'SALE' : type === 'RENT' ? 'RENT' : type;
+      qb.andWhere('property.transactionType = :transactionType', { transactionType });
     }
-    
+
     if (typeof query.priceRange === 'string') {
       const parts = query.priceRange.split('-');
       if (parts.length === 2) {
@@ -43,45 +63,106 @@ export const getProperties = async (req: Request, res: Response, next: (error: u
         query.minPrice = query.priceRange.replace('+', '');
       }
     }
-    if (typeof query.category === 'string') where.category = { slug: query.category, isActive: true };
-    if (typeof query.status === 'string') where.status = query.status;
-    if (typeof query.availability === 'string') where.status = query.availability;
-    if (typeof query.furnishingStatus === 'string') where.furnishingStatus = query.furnishingStatus;
-    if (query.featured === 'true') where.isFeatured = true;
-    if (query.newDevelopment === 'true') where.isNewDevelopment = true;
+
+    if (typeof query.category === 'string') {
+      const category = await categoryRepo.findOne({ where: { slug: query.category, isActive: true } });
+      if (category) {
+        qb.andWhere('property.categoryId = :categoryId', { categoryId: category.id });
+      }
+    }
+
+    if (typeof query.status === 'string') {
+      qb.andWhere('property.status = :status', { status: query.status });
+    }
+    if (typeof query.availability === 'string') {
+      qb.andWhere('property.status = :status', { status: query.availability });
+    }
+    if (typeof query.furnishingStatus === 'string') {
+      qb.andWhere('property.furnishingStatus = :furnishingStatus', { furnishingStatus: query.furnishingStatus });
+    }
+    if (query.featured === 'true') {
+      qb.andWhere('property.isFeatured = :isFeatured', { isFeatured: true });
+    }
+    if (query.newDevelopment === 'true') {
+      qb.andWhere('property.isNewDevelopment = :isNewDevelopment', { isNewDevelopment: true });
+    }
 
     const minPrice = numberQuery(query.minPrice);
     const maxPrice = numberQuery(query.maxPrice);
     const minSize = numberQuery(query.minSize);
     const maxSize = numberQuery(query.maxSize);
-    if (minPrice !== undefined || maxPrice !== undefined) where.price = { ...(minPrice !== undefined ? { gte: minPrice } : {}), ...(maxPrice !== undefined ? { lte: maxPrice } : {}) };
-    if (minSize !== undefined || maxSize !== undefined) where.size = { ...(minSize !== undefined ? { gte: minSize } : {}), ...(maxSize !== undefined ? { lte: maxSize } : {}) };
+
+    if (minPrice !== undefined || maxPrice !== undefined) {
+      if (minPrice !== undefined && maxPrice !== undefined) {
+        qb.andWhere('property.price BETWEEN :minPrice AND :maxPrice', { minPrice, maxPrice });
+      } else if (minPrice !== undefined) {
+        qb.andWhere('property.price >= :minPrice', { minPrice });
+      } else if (maxPrice !== undefined) {
+        qb.andWhere('property.price <= :maxPrice', { maxPrice });
+      }
+    }
+
+    if (minSize !== undefined || maxSize !== undefined) {
+      if (minSize !== undefined && maxSize !== undefined) {
+        qb.andWhere('property.size BETWEEN :minSize AND :maxSize', { minSize, maxSize });
+      } else if (minSize !== undefined) {
+        qb.andWhere('property.size >= :minSize', { minSize });
+      } else if (maxSize !== undefined) {
+        qb.andWhere('property.size <= :maxSize', { maxSize });
+      }
+    }
+
     const bedrooms = numberQuery(query.bedrooms);
     const bathrooms = numberQuery(query.bathrooms);
-    if (bedrooms !== undefined) where.bedrooms = { gte: bedrooms };
-    if (bathrooms !== undefined) where.bathrooms = { gte: bathrooms };
+    if (bedrooms !== undefined) {
+      qb.andWhere('property.bedrooms >= :bedrooms', { bedrooms });
+    }
+    if (bathrooms !== undefined) {
+      qb.andWhere('property.bathrooms >= :bathrooms', { bathrooms });
+    }
+
     const minBedrooms = numberQuery(query.minBedrooms);
     const maxBedrooms = numberQuery(query.maxBedrooms);
     const minBathrooms = numberQuery(query.minBathrooms);
     const maxBathrooms = numberQuery(query.maxBathrooms);
-    if (minBedrooms !== undefined || maxBedrooms !== undefined) where.bedrooms = { ...(minBedrooms !== undefined ? { gte: minBedrooms } : {}), ...(maxBedrooms !== undefined ? { lte: maxBedrooms } : {}) };
-    if (minBathrooms !== undefined || maxBathrooms !== undefined) where.bathrooms = { ...(minBathrooms !== undefined ? { gte: minBathrooms } : {}), ...(maxBathrooms !== undefined ? { lte: maxBathrooms } : {}) };
+
+    if (minBedrooms !== undefined || maxBedrooms !== undefined) {
+      if (minBedrooms !== undefined && maxBedrooms !== undefined) {
+        qb.andWhere('property.bedrooms BETWEEN :minBedrooms AND :maxBedrooms', { minBedrooms, maxBedrooms });
+      } else if (minBedrooms !== undefined) {
+        qb.andWhere('property.bedrooms >= :minBedrooms', { minBedrooms });
+      } else if (maxBedrooms !== undefined) {
+        qb.andWhere('property.bedrooms <= :maxBedrooms', { maxBedrooms });
+      }
+    }
+
+    if (minBathrooms !== undefined || maxBathrooms !== undefined) {
+      if (minBathrooms !== undefined && maxBathrooms !== undefined) {
+        qb.andWhere('property.bathrooms BETWEEN :minBathrooms AND :maxBathrooms', { minBathrooms, maxBathrooms });
+      } else if (minBathrooms !== undefined) {
+        qb.andWhere('property.bathrooms >= :minBathrooms', { minBathrooms });
+      } else if (maxBathrooms !== undefined) {
+        qb.andWhere('property.bathrooms <= :maxBathrooms', { maxBathrooms });
+      }
+    }
 
     const features = listQuery(query.features);
     if (features.length) {
-      and.push(...features.map((feature) => ({ propertyFeatures: { some: { feature: { slug: feature } } } })));
+      qb.andWhere('property.amenities && :features', { features });
     }
-    if (and.length) where.AND = and;
 
     const page = Math.max(1, numberQuery(query.page) || 1);
     const limit = Math.min(100, Math.max(1, numberQuery(query.limit) || 20));
-    const properties = await prisma.property.findMany({
-      where,
-      include: { category: true, agent: true, development: true, propertyImages: true, propertyFeatures: { include: { feature: true } } },
-      skip: (page - 1) * limit,
-      take: limit,
-      orderBy: typeof query.sort === 'string' && query.sort === 'price' ? { price: 'asc' } : { createdAt: 'desc' },
-    });
+
+    qb.skip((page - 1) * limit).take(limit);
+
+    if (typeof query.sort === 'string' && query.sort === 'price') {
+      qb.orderBy('property.price', 'ASC');
+    } else {
+      qb.orderBy('property.createdAt', 'DESC');
+    }
+
+    const properties = await qb.getMany();
 
     res.json({ success: true, data: properties, pagination: { page, limit } });
   } catch (error) {
@@ -92,9 +173,10 @@ export const getProperties = async (req: Request, res: Response, next: (error: u
 export const getPropertyBySlug = async (req: Request, res: Response, next: (error: unknown) => void) => {
   try {
     const slug = String(req.params.slug);
-    const property = await prisma.property.findUnique({
+    const propertyRepo = AppDataSource.getRepository(Property);
+    const property = await propertyRepo.findOne({
       where: { slug },
-      include: { category: true, agent: true, development: true, propertyImages: true, propertyFeatures: { include: { feature: true } } },
+      relations: { category: true, agent: true, development: true, propertyImages: true, propertyFeatures: { feature: true } },
     });
     if (!property) return res.status(404).json({ success: false, message: 'Property not found' });
     return res.json({ success: true, data: property });
@@ -132,8 +214,87 @@ export const getPropertiesByCategory = (req: Request, res: Response, next: (erro
 
 export const createProperty = async (req: Request, res: Response, next: (error: unknown) => void) => {
   try {
-    const property = await prisma.property.create({ data: req.body });
-    return res.status(201).json({ success: true, data: property });
+    const userId = req.user?.id;
+    const userRole = req.user?.role;
+
+    let propertyData = { ...req.body };
+
+    // If user is an agent, automatically assign the property to their agent profile
+    if (userRole === 'agent' && userId) {
+      const agentRepo = AppDataSource.getRepository(Agent);
+      const agent = await agentRepo.findOne({ where: { userId } });
+      if (!agent) {
+        return res.status(400).json({ success: false, message: 'Agent profile not found. Please contact admin to create your agent profile.' });
+      }
+      propertyData.agentId = agent.id;
+    }
+
+    const propertyRepo = AppDataSource.getRepository(Property);
+    const property = propertyRepo.create(propertyData);
+    const savedProperty = await propertyRepo.save(property);
+    return res.status(201).json({ success: true, data: savedProperty });
+  } catch (error: any) {
+    console.error('Create property error:', error);
+
+    if (error.code === '23505') {
+      return res.status(400).json({ success: false, message: 'A property with this slug already exists. Please use a different slug.' });
+    }
+
+    if (error.code === '23503') {
+      return res.status(400).json({ success: false, message: 'Invalid foreign key reference. Check that agentId, categoryId, etc. are valid.' });
+    }
+
+    return res.status(500).json({ success: false, message: 'Failed to create property.', error: error.message });
+  }
+};
+
+export const getPropertyById = async (req: Request, res: Response, next: (error: unknown) => void) => {
+  try {
+    const propertyRepo = AppDataSource.getRepository(Property);
+    const property = await propertyRepo.findOne({
+      where: { id: String(req.params.id) },
+      relations: { category: true, agent: true, development: true, propertyImages: true, propertyFeatures: { feature: true } },
+    });
+    if (!property) return res.status(404).json({ success: false, message: 'Property not found' });
+    return res.json({ success: true, data: property });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+export const replaceProperty = async (req: Request, res: Response, next: (error: unknown) => void) => {
+  try {
+    const propertyRepo = AppDataSource.getRepository(Property);
+    const property = await propertyRepo.findOne({ where: { id: String(req.params.id) } });
+    if (!property) return res.status(404).json({ success: false, message: 'Property not found' });
+    Object.assign(property, req.body);
+    const updatedProperty = await propertyRepo.save(property);
+    return res.json({ success: true, data: updatedProperty });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+export const updateProperty = async (req: Request, res: Response, next: (error: unknown) => void) => {
+  try {
+    const propertyRepo = AppDataSource.getRepository(Property);
+    const property = await propertyRepo.findOne({ where: { id: String(req.params.id) } });
+    if (!property) return res.status(404).json({ success: false, message: 'Property not found' });
+    Object.assign(property, req.body);
+    const updatedProperty = await propertyRepo.save(property);
+    return res.json({ success: true, data: updatedProperty });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+export const deleteProperty = async (req: Request, res: Response, next: (error: unknown) => void) => {
+  try {
+    const propertyRepo = AppDataSource.getRepository(Property);
+    const property = await propertyRepo.findOne({ where: { id: String(req.params.id) } });
+    if (!property) return res.status(404).json({ success: false, message: 'Property not found' });
+    await propertyRepo.remove(property);
+    return res.status(204).send();
   } catch (error) {
     return next(error);
   }

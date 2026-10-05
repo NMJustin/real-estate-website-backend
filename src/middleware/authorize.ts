@@ -11,7 +11,8 @@ export const authorize = (...allowedRoles: string[]) => {
       });
     }
 
-    if (!allowedRoles.includes(user.role)) {
+    // Case-insensitive role comparison
+    if (!allowedRoles.map(r => r.toLowerCase()).includes(user.role.toLowerCase())) {
       return res.status(403).json({
         success: false,
         message: 'Forbidden: insufficient permissions',

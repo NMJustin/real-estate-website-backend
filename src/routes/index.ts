@@ -1,7 +1,8 @@
 import { Router } from 'express';
 import authRoutes from './authRoutes.js';
 import propertyRoutes from './propertyRoutes.js';
-import agentRoutes from './agentRoutes.js';
+import publicAgentRoutes from './publicAgentRoutes.js';
+import agentDashboardRoutes from './agentDashboardRoutes.js';
 import serviceRoutes from './serviceRoutes.js';
 import inquiryRoutes from './inquiryRoutes.js';
 import viewingRoutes from './viewingRoutes.js';
@@ -18,6 +19,10 @@ import pageRoutes from './pageRoutes.js';
 import settingRoutes from './settingRoutes.js';
 import propertySearchRoutes from './propertySearchRoutes.js';
 import propertyMediaRoutes from './propertyMediaRoutes.js';
+import propertyManagerRoutes from './propertyManagerRoutes.js';
+import propertyManagerInquiryRoutes from './propertyManagerInquiryRoutes.js';
+import propertyManagerViewingRoutes from './propertyManagerViewingRoutes.js';
+import contentEditorRoutes from './contentEditorRoutes.js';
 
 const router = Router();
 
@@ -30,7 +35,8 @@ router.use('/properties', propertyRoutes);
 router.use('/property-searches', propertySearchRoutes);
 router.use('/property-media', propertyMediaRoutes);
 router.use('/categories', categoryRoutes);
-router.use('/agents', agentRoutes);
+router.use('/agents', publicAgentRoutes);
+router.use('/agent-dashboard', agentDashboardRoutes);
 router.use('/services', serviceRoutes);
 router.use('/inquiries', inquiryRoutes);
 router.use('/viewings', viewingRoutes);
@@ -44,5 +50,9 @@ router.use('/favorites', favoriteRoutes);
 router.use('/pages', pageRoutes);
 router.use('/settings', settingRoutes);
 router.use('/admin', adminRoutes);
+router.use('/property-manager', propertyManagerRoutes);
+router.use('/property-manager/inquiries', propertyManagerInquiryRoutes);
+router.use('/property-manager/viewings', propertyManagerViewingRoutes);
+router.use('/content-editor', contentEditorRoutes);
 
 export default router;

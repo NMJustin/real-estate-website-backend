@@ -1,9 +1,11 @@
 import type { Request, Response } from 'express';
-import prisma from '../lib/prisma.js';
+import { AppDataSource } from '../lib/typeorm.js';
+import { ValuationRequest } from '../entities/ValuationRequest.js';
 
 export const getValuations = async (_req: Request, res: Response, next: (error: unknown) => void) => {
   try {
-    const valuations = await prisma.valuationRequest.findMany({ orderBy: { createdAt: 'desc' } });
+    const valuationRepo = AppDataSource.getRepository(ValuationRequest);
+    const valuations = await valuationRepo.find({ order: { createdAt: 'DESC' } });
     res.json({ success: true, data: valuations });
   } catch (error) {
     next(error);
@@ -12,8 +14,10 @@ export const getValuations = async (_req: Request, res: Response, next: (error: 
 
 export const createValuation = async (req: Request, res: Response, next: (error: unknown) => void) => {
   try {
-    const valuation = await prisma.valuationRequest.create({ data: req.body });
-    res.status(201).json({ success: true, data: valuation });
+    const valuationRepo = AppDataSource.getRepository(ValuationRequest);
+    const valuation = valuationRepo.create(req.body);
+    const savedValuation = await valuationRepo.save(valuation);
+    res.status(201).json({ success: true, data: savedValuation });
   } catch (error) {
     next(error);
   }
@@ -21,7 +25,8 @@ export const createValuation = async (req: Request, res: Response, next: (error:
 
 export const getValuationById = async (req: Request, res: Response, next: (error: unknown) => void) => {
   try {
-    const valuation = await prisma.valuationRequest.findUnique({ where: { id: String(req.params.id) } });
+    const valuationRepo = AppDataSource.getRepository(ValuationRequest);
+    const valuation = await valuationRepo.findOne({ where: { id: String(req.params.id) } });
     if (!valuation) return res.status(404).json({ success: false, message: 'Valuation not found' });
     return res.json({ success: true, data: valuation });
   } catch (error) {
@@ -29,10 +34,39 @@ export const getValuationById = async (req: Request, res: Response, next: (error
   }
 };
 
+export const replaceValuation = async (req: Request, res: Response, next: (error: unknown) => void) => {
+  try {
+    const valuationRepo = AppDataSource.getRepository(ValuationRequest);
+    const valuation = await valuationRepo.findOne({ where: { id: String(req.params.id) } });
+    if (!valuation) return res.status(404).json({ success: false, message: 'Valuation not found' });
+    Object.assign(valuation, req.body);
+    const updatedValuation = await valuationRepo.save(valuation);
+    res.json({ success: true, data: updatedValuation });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const updateValuation = async (req: Request, res: Response, next: (error: unknown) => void) => {
   try {
-    const valuation = await prisma.valuationRequest.update({ where: { id: String(req.params.id) }, data: req.body });
-    res.json({ success: true, data: valuation });
+    const valuationRepo = AppDataSource.getRepository(ValuationRequest);
+    const valuation = await valuationRepo.findOne({ where: { id: String(req.params.id) } });
+    if (!valuation) return res.status(404).json({ success: false, message: 'Valuation not found' });
+    Object.assign(valuation, req.body);
+    const updatedValuation = await valuationRepo.save(valuation);
+    res.json({ success: true, data: updatedValuation });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const deleteValuation = async (req: Request, res: Response, next: (error: unknown) => void) => {
+  try {
+    const valuationRepo = AppDataSource.getRepository(ValuationRequest);
+    const valuation = await valuationRepo.findOne({ where: { id: String(req.params.id) } });
+    if (!valuation) return res.status(404).json({ success: false, message: 'Valuation not found' });
+    await valuationRepo.remove(valuation);
+    res.status(204).send();
   } catch (error) {
     next(error);
   }

@@ -2,6 +2,8 @@ import { Router } from 'express';
 import {
   createService,
   deleteService,
+  getAllServices,
+  getServiceById,
   getServices,
   replaceService,
   updateService,
@@ -9,7 +11,8 @@ import {
 
 const router = Router();
 
-router.get('/', getServices);
+router.get('/', getAllServices);
+router.get('/:id', getServiceById);
 router.post('/', createService);
 router.put('/:id', replaceService);
 router.patch('/:id', updateService);

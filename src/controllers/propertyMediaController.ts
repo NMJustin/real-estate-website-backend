@@ -15,7 +15,13 @@ export const uploadPropertyMedia = async (req: Request, res: Response) => {
   if (req.user?.role !== 'admin') {
     const userRepo = AppDataSource.getRepository(User);
     const user = await userRepo.findOne({ where: { id: req.user?.id }, relations: { role: true } });
-    if (!user || !user.canUploadPropertyMedia || !user.role || !['agent', 'property_owner'].includes(user.role.name)) return res.status(403).json({ success: false, message: 'Your account is not permitted to upload property media.' });
+    const isPropertyManager = user?.role?.name === 'property_manager';
+    const canUploadAsAgentOrOwner = Boolean(
+      user?.canUploadPropertyMedia && user.role && ['agent', 'property_owner'].includes(user.role.name),
+    );
+    if (!user || (!isPropertyManager && !canUploadAsAgentOrOwner)) {
+      return res.status(403).json({ success: false, message: 'Your account is not permitted to upload property media.' });
+    }
   }
   const file = req.file;
   if (!file) return res.status(400).json({ success: false, message: 'Please choose an image or video file.' });

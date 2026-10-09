@@ -22,6 +22,7 @@ import {
 } from '../controllers/propertyController.js';
 import { requireAuth } from '../middleware/auth.js';
 import { authorize } from '../middleware/authorize.js';
+import { requireOwnedManagerProperty } from '../middleware/propertyManagerOwnership.js';
 
 const router = Router();
 
@@ -44,8 +45,8 @@ router.get('/:slug', getPropertyBySlug);
 
 // Authenticated routes for property management
 router.post('/', requireAuth, authorize('admin', 'property_manager', 'agent'), createProperty);
-router.put('/:id', requireAuth, authorize('admin', 'property_manager', 'agent'), replaceProperty);
-router.patch('/:id', requireAuth, authorize('admin', 'property_manager', 'agent'), updateProperty);
-router.delete('/:id', requireAuth, authorize('admin', 'property_manager', 'agent'), deleteProperty);
+router.put('/:id', requireAuth, authorize('admin', 'property_manager', 'agent'), requireOwnedManagerProperty, replaceProperty);
+router.patch('/:id', requireAuth, authorize('admin', 'property_manager', 'agent'), requireOwnedManagerProperty, updateProperty);
+router.delete('/:id', requireAuth, authorize('admin', 'property_manager', 'agent'), requireOwnedManagerProperty, deleteProperty);
 
 export default router;

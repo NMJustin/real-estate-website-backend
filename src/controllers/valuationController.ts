@@ -34,12 +34,20 @@ export const getValuationById = async (req: Request, res: Response, next: (error
   }
 };
 
+const VALUATION_UPDATABLE_FIELDS = [
+  'name', 'email', 'phone', 'propertyType', 'location',
+  'propertySize', 'bedrooms', 'bathrooms', 'description',
+  'estimatedValue', 'status',
+] as const;
+
 export const replaceValuation = async (req: Request, res: Response, next: (error: unknown) => void) => {
   try {
     const valuationRepo = AppDataSource.getRepository(ValuationRequest);
     const valuation = await valuationRepo.findOne({ where: { id: String(req.params.id) } });
     if (!valuation) return res.status(404).json({ success: false, message: 'Valuation not found' });
-    Object.assign(valuation, req.body);
+    for (const field of VALUATION_UPDATABLE_FIELDS) {
+      if (field in req.body) (valuation as Record<string, unknown>)[field] = req.body[field];
+    }
     const updatedValuation = await valuationRepo.save(valuation);
     res.json({ success: true, data: updatedValuation });
   } catch (error) {
@@ -52,7 +60,9 @@ export const updateValuation = async (req: Request, res: Response, next: (error:
     const valuationRepo = AppDataSource.getRepository(ValuationRequest);
     const valuation = await valuationRepo.findOne({ where: { id: String(req.params.id) } });
     if (!valuation) return res.status(404).json({ success: false, message: 'Valuation not found' });
-    Object.assign(valuation, req.body);
+    for (const field of VALUATION_UPDATABLE_FIELDS) {
+      if (field in req.body) (valuation as Record<string, unknown>)[field] = req.body[field];
+    }
     const updatedValuation = await valuationRepo.save(valuation);
     res.json({ success: true, data: updatedValuation });
   } catch (error) {

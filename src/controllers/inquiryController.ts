@@ -81,7 +81,24 @@ export const updateInquiry = async (req: Request, res: Response, next: (error: u
     const inquiryRepo = AppDataSource.getRepository(Inquiry);
     const inquiry = await inquiryRepo.findOne({ where: { id: String(req.params.id) } });
     if (!inquiry) return res.status(404).json({ success: false, message: 'Inquiry not found' });
-    Object.assign(inquiry, req.body);
+    const body = req.body as Record<string, unknown>;
+    const allowedStatuses = new Set(['NEW', 'PENDING', 'READ', 'CONTACTED', 'INTERESTED', 'APPROVED', 'RESOLVED', 'CLOSED']);
+    for (const field of ['name', 'email', 'phone', 'message'] as const) {
+      if (field in body) {
+        if (typeof body[field] !== 'string' || (field !== 'phone' && !body[field].trim())) {
+          return res.status(400).json({ success: false, message: `Invalid ${field}.` });
+        }
+        const value = body[field].trim();
+        if (field === 'phone') inquiry.phone = value || undefined;
+        else inquiry[field] = value;
+      }
+    }
+    if ('status' in body) {
+      if (typeof body.status !== 'string' || !allowedStatuses.has(body.status)) {
+        return res.status(400).json({ success: false, message: 'Invalid inquiry status.' });
+      }
+      inquiry.status = body.status;
+    }
     const updatedInquiry = await inquiryRepo.save(inquiry);
     res.json({ success: true, data: updatedInquiry });
   } catch (error) {

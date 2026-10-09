@@ -2,6 +2,7 @@ import type { Request, Response } from 'express';
 import { AppDataSource } from '../lib/typeorm.js';
 import { Property } from '../entities/Property.js';
 import { PropertyImage } from '../entities/PropertyImage.js';
+import { User } from '../entities/User.js';
 import type { DeepPartial } from 'typeorm';
 
 const toSlug = (value: string) => value.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
@@ -15,6 +16,7 @@ const imageData = (images: unknown) => Array.isArray(images)
 
 const buildPropertyData = (body: Record<string, unknown>) => ({
   title: String(body.title || '').trim(), description: optionalString(body.description) || undefined, categoryId: optionalString(body.categoryId), agentId: optionalString(body.agentId),
+  propertyManagerId: body.propertyManagerId === null || body.propertyManagerId === '' ? null : optionalString(body.propertyManagerId),
   propertyType: String(body.propertyType || 'RESIDENTIAL'), transactionType: String(body.transactionType || 'SALE'), price: optionalNumber(body.price), currency: optionalString(body.currency) || 'RWF',
   location: optionalString(body.location), district: optionalString(body.district), sector: optionalString(body.sector), address: optionalString(body.address), neighborhood: optionalString(body.neighborhood), area: optionalString(body.area),
   nearbyLandmarks: optionalString(body.nearbyLandmarks), locationDescription: optionalString(body.locationDescription), latitude: optionalNumber(body.latitude), longitude: optionalNumber(body.longitude),
@@ -28,17 +30,21 @@ export const getAdminProperties = async (req: Request, res: Response, next: (err
   try {
     const propertyRepo = AppDataSource.getRepository(Property);
     const page = Math.max(1, Number(req.query.page) || 1);
-    const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 10));
+    const isPropertyManager = req.user?.role?.toLowerCase() === 'property_manager';
+    const limit = Math.min(100, Math.max(1, Number(req.query.limit) || (isPropertyManager ? 100 : 10)));
     const search = typeof req.query.search === 'string' ? req.query.search.trim() : '';
 
     const qb = propertyRepo.createQueryBuilder('property')
       .leftJoinAndSelect('property.agent', 'agent')
       .leftJoinAndSelect('property.category', 'category')
       .leftJoinAndSelect('property.propertyImages', 'propertyImages')
-      .orderBy('property.createdAt', 'DESC')
+      .orderBy(isPropertyManager ? 'property.updatedAt' : 'property.createdAt', 'DESC')
       .skip((page - 1) * limit)
       .take(limit);
 
+    if (isPropertyManager) {
+      qb.andWhere('property.propertyManagerId = :propertyManagerId', { propertyManagerId: req.user!.id });
+    }
     if (typeof req.query.transactionType === 'string') {
       qb.andWhere('property.transactionType = :transactionType', { transactionType: req.query.transactionType });
     }
@@ -63,7 +69,31 @@ export const getAdminProperties = async (req: Request, res: Response, next: (err
       category: p.category ? { id: p.category.id, name: p.category.name } : null,
     }));
 
-    return res.json({ success: true, data: filteredData, pagination: { page, limit, total, totalPages: Math.max(1, Math.ceil(total / limit)) } });
+    const response: Record<string, unknown> = {
+      success: true,
+      data: filteredData,
+      pagination: { page, limit, total, totalPages: Math.max(1, Math.ceil(total / limit)) },
+    };
+    if (isPropertyManager) {
+      const statusRows = await propertyRepo.createQueryBuilder('property')
+        .select('property.status', 'status')
+        .addSelect('COUNT(*)', 'count')
+        .where('property.propertyManagerId = :propertyManagerId', { propertyManagerId: req.user!.id })
+        .groupBy('property.status')
+        .getRawMany<{ status: string; count: string }>();
+      const publicationRows = await propertyRepo.createQueryBuilder('property')
+        .select('property.publicationStatus', 'status')
+        .addSelect('COUNT(*)', 'count')
+        .where('property.propertyManagerId = :propertyManagerId', { propertyManagerId: req.user!.id })
+        .groupBy('property.publicationStatus')
+        .getRawMany<{ status: string; count: string }>();
+      response.stats = {
+        availableProperties: Number(statusRows.find((row) => row.status === 'AVAILABLE')?.count || 0),
+        statusCounts: Object.fromEntries(statusRows.map((row) => [row.status, Number(row.count)])),
+        publicationStatusCounts: Object.fromEntries(publicationRows.map((row) => [row.status, Number(row.count)])),
+      };
+    }
+    return res.json(response);
   } catch (error) { return next(error); }
 };
 
@@ -93,6 +123,15 @@ export const createAdminProperty = async (req: Request, res: Response, next: (er
     const body = req.body as Record<string, unknown>;
     const data = buildPropertyData(body);
     if (!data.title) return res.status(400).json({ success: false, message: 'A property title is required.' });
+    if (data.propertyManagerId) {
+      const manager = await AppDataSource.getRepository(User).findOne({
+        where: { id: data.propertyManagerId, isActive: true },
+        relations: { role: true },
+      });
+      if (manager?.role?.name.trim().toLowerCase() !== 'property_manager') {
+        return res.status(400).json({ success: false, message: 'Select an active property manager.' });
+      }
+    }
 
     const baseSlug = toSlug(typeof body.slug === 'string' && body.slug ? body.slug : data.title);
     if (!baseSlug) return res.status(400).json({ success: false, message: 'Please provide a valid property title.' });
@@ -159,6 +198,15 @@ const saveProperty = async (req: Request, res: Response, next: (error: unknown) 
 
     const data = buildPropertyData({ ...existing, ...body });
     if (!data.title) return res.status(400).json({ success: false, message: 'A property title is required.' });
+    if ('propertyManagerId' in body && data.propertyManagerId) {
+      const manager = await AppDataSource.getRepository(User).findOne({
+        where: { id: data.propertyManagerId, isActive: true },
+        relations: { role: true },
+      });
+      if (manager?.role?.name.trim().toLowerCase() !== 'property_manager') {
+        return res.status(400).json({ success: false, message: 'Select an active property manager.' });
+      }
+    }
 
     const queryRunner = AppDataSource.createQueryRunner();
     await queryRunner.connect();

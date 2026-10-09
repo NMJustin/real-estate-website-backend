@@ -22,6 +22,7 @@ import propertyMediaRoutes from './propertyMediaRoutes.js';
 import propertyManagerRoutes from './propertyManagerRoutes.js';
 import propertyManagerInquiryRoutes from './propertyManagerInquiryRoutes.js';
 import propertyManagerViewingRoutes from './propertyManagerViewingRoutes.js';
+import propertyManagerListingRoutes from './propertyManagerListingRoutes.js';
 import contentEditorRoutes from './contentEditorRoutes.js';
 
 const router = Router();
@@ -50,9 +51,10 @@ router.use('/favorites', favoriteRoutes);
 router.use('/pages', pageRoutes);
 router.use('/settings', settingRoutes);
 router.use('/admin', adminRoutes);
-router.use('/property-manager', propertyManagerRoutes);
+router.use('/property-manager/requests', propertyManagerListingRoutes);
 router.use('/property-manager/inquiries', propertyManagerInquiryRoutes);
 router.use('/property-manager/viewings', propertyManagerViewingRoutes);
+router.use('/property-manager', propertyManagerRoutes);
 router.use('/content-editor', contentEditorRoutes);
 
 export default router;

@@ -4,6 +4,8 @@ import { Agent } from '../entities/Agent.js';
 import { ViewingRequest } from '../entities/ViewingRequest.js';
 import type { DeepPartial } from 'typeorm';
 
+const allowedViewingStatuses = new Set(['PENDING', 'SCHEDULED', 'CONFIRMED', 'COMPLETED', 'CANCELLED']);
+
 export const getAgentViewings = async (req: Request, res: Response, next: (error: unknown) => void) => {
   try {
     const userId = req.user?.id;
@@ -140,7 +142,11 @@ export const updateViewingStatus = async (req: Request, res: Response, next: (er
       return res.status(403).json({ success: false, message: 'Agent profile not found.' });
     }
 
-    const { status, preferredDate, preferredTime } = req.body;
+    const { status, preferredDate, preferredTime } = req.body as {
+      status?: unknown;
+      preferredDate?: unknown;
+      preferredTime?: unknown;
+    };
 
     const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
     const viewing = await viewingRepo.findOne({
@@ -151,9 +157,27 @@ export const updateViewingStatus = async (req: Request, res: Response, next: (er
       return res.status(404).json({ success: false, message: 'Viewing not found or not assigned to you.' });
     }
 
-    if (status !== undefined) viewing.status = status;
-    if (preferredDate !== undefined) viewing.preferredDate = preferredDate ? new Date(preferredDate) : undefined;
-    if (preferredTime !== undefined) viewing.preferredTime = preferredTime;
+    if (status !== undefined) {
+      if (typeof status !== 'string' || !allowedViewingStatuses.has(status)) {
+        return res.status(400).json({ success: false, message: 'Invalid viewing status.' });
+      }
+      viewing.status = status;
+    }
+    if (preferredDate !== undefined) {
+      if (preferredDate === null || preferredDate === '') {
+        viewing.preferredDate = undefined;
+      } else if (typeof preferredDate !== 'string' || Number.isNaN(Date.parse(preferredDate))) {
+        return res.status(400).json({ success: false, message: 'Invalid preferred date.' });
+      } else {
+        viewing.preferredDate = new Date(preferredDate);
+      }
+    }
+    if (preferredTime !== undefined) {
+      if (preferredTime !== null && typeof preferredTime !== 'string') {
+        return res.status(400).json({ success: false, message: 'Invalid preferred time.' });
+      }
+      viewing.preferredTime = typeof preferredTime === 'string' && preferredTime.trim() ? preferredTime.trim() : undefined;
+    }
 
     const updatedViewing = await viewingRepo.save(viewing);
 

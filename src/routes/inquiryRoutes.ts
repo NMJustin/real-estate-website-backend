@@ -1,4 +1,6 @@
 import { Router } from 'express';
+import { requireAuth } from '../middleware/auth.js';
+import { authorize } from '../middleware/authorize.js';
 import {
   createInquiry,
   deleteInquiry,
@@ -10,11 +12,11 @@ import {
 
 const router = Router();
 
-router.get('/', getInquiries);
 router.post('/', createInquiry);
-router.get('/:id', getInquiryById);
-router.put('/:id', replaceInquiry);
-router.patch('/:id', updateInquiry);
-router.delete('/:id', deleteInquiry);
+router.get('/', requireAuth, authorize('admin'), getInquiries);
+router.get('/:id', requireAuth, authorize('admin'), getInquiryById);
+router.put('/:id', requireAuth, authorize('admin'), replaceInquiry);
+router.patch('/:id', requireAuth, authorize('admin'), updateInquiry);
+router.delete('/:id', requireAuth, authorize('admin'), deleteInquiry);
 
 export default router;

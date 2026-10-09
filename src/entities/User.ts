@@ -55,6 +55,12 @@ export class User {
   @Column('boolean', { name: 'can_upload_property_media', default: false })
   canUploadPropertyMedia: boolean;
 
+  @Column('text', { name: 'password_reset_token_hash', nullable: true })
+  passwordResetTokenHash: string | null;
+
+  @Column('timestamp', { name: 'password_reset_expires_at', nullable: true })
+  passwordResetExpiresAt: Date | null;
+
   @ManyToOne(() => Role, (role) => role.users)
   @JoinColumn({ name: 'role_id' })
   role: Role;

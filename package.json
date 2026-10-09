@@ -7,7 +7,7 @@
         "dev": "tsx watch src/server.ts",
         "build": "tsc",
         "start": "node dist/server.js",
-        "migration:run": "npm run build && typeorm migration:run -d dist/data-source.js",
+        "migration:run": "tsx src/scripts/runMigrations.ts",
         "seed": "npm run build && node dist/seed.js",
         "fix-schema": "npm run build && node dist/fix-schema.js"
     },
@@ -22,6 +22,7 @@
         "express": "^4.21.2",
         "jsonwebtoken": "^9.0.3",
         "multer": "^2.4.0",
+        "nodemailer": "^7.0.13",
         "pg": "^8.23.1",
         "reflect-metadata": "^0.2.2",
         "swagger-jsdoc": "^6.3.0",
@@ -34,6 +35,7 @@
         "@types/express": "^5.0.0",
         "@types/jsonwebtoken": "^9.0.10",
         "@types/node": "^22.10.2",
+        "@types/nodemailer": "^8.0.2",
         "@types/swagger-ui-express": "^4.1.8",
         "tsx": "^4.19.1",
         "typescript": "^5.7.2"

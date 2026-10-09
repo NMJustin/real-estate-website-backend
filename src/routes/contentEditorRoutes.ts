@@ -9,7 +9,7 @@ import {
 import {
   createFaq,
   deleteFaq,
-  getFaqs,
+  getManagedFaqs,
   replaceFaq,
   updateFaq,
 } from '../controllers/faqController.js';
@@ -38,7 +38,7 @@ router.patch('/articles/:id', updateArticle);
 router.delete('/articles/:id', deleteArticle);
 
 // Content Editor can manage FAQs
-router.get('/faqs', getFaqs);
+router.get('/faqs', getManagedFaqs);
 router.post('/faqs', createFaq);
 router.put('/faqs/:id', replaceFaq);
 router.patch('/faqs/:id', updateFaq);

@@ -2,11 +2,14 @@ import { Router } from 'express';
 import {
   deleteInquiry,
   getInquiryById,
-  getInquiries,
   updateInquiry,
 } from '../controllers/inquiryController.js';
 import { requireAuth } from '../middleware/auth.js';
 import { authorize } from '../middleware/authorize.js';
+import {
+  getManagedInquiries,
+} from '../controllers/propertyManagerController.js';
+import { requireOwnedManagerInquiry } from '../middleware/propertyManagerOwnership.js';
 
 const router = Router();
 
@@ -14,9 +17,9 @@ const router = Router();
 router.use(requireAuth, authorize('property_manager', 'admin'));
 
 // Property Manager can view and manage inquiries
-router.get('/', getInquiries);
-router.get('/:id', getInquiryById);
-router.patch('/:id', updateInquiry);
-router.delete('/:id', deleteInquiry);
+router.get('/', getManagedInquiries);
+router.get('/:id', requireOwnedManagerInquiry, getInquiryById);
+router.patch('/:id', requireOwnedManagerInquiry, updateInquiry);
+router.delete('/:id', requireOwnedManagerInquiry, deleteInquiry);
 
 export default router;

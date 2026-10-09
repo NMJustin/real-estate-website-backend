@@ -1,4 +1,6 @@
 import { Router } from 'express';
+import { requireAuth } from '../middleware/auth.js';
+import { authorize } from '../middleware/authorize.js';
 import {
   createViewing,
   deleteViewing,
@@ -10,11 +12,11 @@ import {
 
 const router = Router();
 
-router.get('/', getViewings);
 router.post('/', createViewing);
-router.get('/:id', getViewingById);
-router.put('/:id', replaceViewing);
-router.patch('/:id', updateViewing);
-router.delete('/:id', deleteViewing);
+router.get('/', requireAuth, authorize('admin'), getViewings);
+router.get('/:id', requireAuth, authorize('admin'), getViewingById);
+router.put('/:id', requireAuth, authorize('admin'), replaceViewing);
+router.patch('/:id', requireAuth, authorize('admin'), updateViewing);
+router.delete('/:id', requireAuth, authorize('admin'), deleteViewing);
 
 export default router;

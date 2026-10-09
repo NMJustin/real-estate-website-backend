@@ -13,6 +13,14 @@ export const getFaqs = async (_req: Request, res: Response, next: (error: unknow
   } catch (error) { next(error); }
 };
 
+export const getManagedFaqs = async (_req: Request, res: Response, next: (error: unknown) => void) => {
+  try {
+    const faqRepo = AppDataSource.getRepository(Faq);
+    const faqs = await faqRepo.find({ order: { displayOrder: 'ASC' } });
+    res.json({ success: true, data: faqs });
+  } catch (error) { next(error); }
+};
+
 export const getFaqById = async (req: Request, res: Response, next: (error: unknown) => void) => {
   try {
     const faqRepo = AppDataSource.getRepository(Faq);

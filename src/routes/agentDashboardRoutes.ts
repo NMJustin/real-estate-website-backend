@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import {
+  archiveAgentProperty,
   getAgentProperties,
   getAgentProperty,
   updateAgentProperty,
@@ -18,8 +19,11 @@ import {
 } from '../controllers/agentViewingController.js';
 import { requireAuth } from '../middleware/auth.js';
 import { authorize } from '../middleware/authorize.js';
+import { uploadPropertyMedia } from '../controllers/propertyMediaController.js';
+import multer from 'multer';
 
 const router = Router();
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 100 * 1024 * 1024 } });
 
 // Apply authentication + agent role check to ALL agent dashboard routes
 router.use(requireAuth, authorize('agent', 'admin'));
@@ -28,6 +32,8 @@ router.use(requireAuth, authorize('agent', 'admin'));
 router.get('/my-properties', getAgentProperties);
 router.get('/my-properties/:id', getAgentProperty);
 router.patch('/my-properties/:id', updateAgentProperty);
+router.delete('/my-properties/:id', archiveAgentProperty);
+router.post('/property-media', upload.single('file'), uploadPropertyMedia);
 
 // Agent can view and manage customer inquiries
 router.get('/my-inquiries', getAgentInquiries);

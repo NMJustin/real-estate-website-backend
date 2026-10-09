@@ -1,12 +1,18 @@
 import type { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
+import { createHash, randomBytes } from 'node:crypto';
 import jwt from 'jsonwebtoken';
 import { AppDataSource } from '../lib/typeorm.js';
 import { User } from '../entities/User.js';
 import { Role } from '../entities/Role.js';
+import { isPasswordResetEmailConfigured, sendPasswordResetEmail } from '../lib/passwordResetEmail.js';
 
 const JWT_SECRET = process.env.JWT_SECRET as string;
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
+const PASSWORD_RESET_TTL_MS = 30 * 60 * 1000;
+const PASSWORD_RESET_RESPONSE = 'If an account exists for that email, password reset instructions will be sent.';
+
+const hashResetToken = (token: string) => createHash('sha256').update(token).digest('hex');
 
 // ─── Admin Login ────────────────────────────────────────────────────────────
 export const adminLogin = async (req: Request, res: Response) => {
@@ -115,6 +121,82 @@ export const login = async (req: Request, res: Response) => {
     });
   } catch (error) {
     return res.status(500).json({ success: false, message: 'Internal server error.' });
+  }
+};
+
+export const forgotPassword = async (req: Request, res: Response) => {
+  try {
+    const email = typeof req.body?.email === 'string' ? req.body.email.trim().toLowerCase() : '';
+    if (!email || email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return res.status(400).json({ success: false, message: 'Enter a valid email address.' });
+    }
+
+    if (!isPasswordResetEmailConfigured()) {
+      return res.status(503).json({ success: false, message: 'Password reset is temporarily unavailable. Please contact an administrator.' });
+    }
+
+    const userRepo = AppDataSource.getRepository(User);
+    const user = await userRepo.createQueryBuilder('user')
+      .where('LOWER(user.email) = :email', { email })
+      .getOne();
+    if (!user || !user.isActive) {
+      return res.json({ success: true, message: PASSWORD_RESET_RESPONSE });
+    }
+
+    if (user.passwordResetExpiresAt && user.passwordResetExpiresAt.getTime() > Date.now()) {
+      return res.json({ success: true, message: PASSWORD_RESET_RESPONSE });
+    }
+
+    const token = randomBytes(32).toString('hex');
+    user.passwordResetTokenHash = hashResetToken(token);
+    user.passwordResetExpiresAt = new Date(Date.now() + PASSWORD_RESET_TTL_MS);
+    await userRepo.save(user);
+
+    try {
+      await sendPasswordResetEmail(user.email, token);
+    } catch (error) {
+      user.passwordResetTokenHash = null;
+      user.passwordResetExpiresAt = null;
+      await userRepo.save(user);
+      console.error('Password reset email delivery failed:', error);
+      return res.status(503).json({ success: false, message: 'Password reset email could not be delivered. Please try again later or contact an administrator.' });
+    }
+
+    return res.json({ success: true, message: PASSWORD_RESET_RESPONSE });
+  } catch (error) {
+    console.error('Forgot password request failed:', error);
+    return res.status(500).json({ success: false, message: 'Unable to process the password reset request.' });
+  }
+};
+
+export const resetPassword = async (req: Request, res: Response) => {
+  try {
+    const token = typeof req.body?.token === 'string' ? req.body.token : '';
+    const password = typeof req.body?.password === 'string' ? req.body.password : '';
+    if (!/^[a-f0-9]{64}$/i.test(token)) {
+      return res.status(400).json({ success: false, message: 'This password reset link is invalid or expired.' });
+    }
+    if (password.length < 8 || password.length > 128) {
+      return res.status(400).json({ success: false, message: 'Password must be between 8 and 128 characters.' });
+    }
+
+    const userRepo = AppDataSource.getRepository(User);
+    const user = await userRepo.findOne({
+      where: { passwordResetTokenHash: hashResetToken(token) },
+    });
+    if (!user || !user.isActive || !user.passwordResetExpiresAt || user.passwordResetExpiresAt.getTime() <= Date.now()) {
+      return res.status(400).json({ success: false, message: 'This password reset link is invalid or expired.' });
+    }
+
+    user.passwordHash = await bcrypt.hash(password, 12);
+    user.passwordResetTokenHash = null;
+    user.passwordResetExpiresAt = null;
+    await userRepo.save(user);
+
+    return res.json({ success: true, message: 'Password reset successfully. You can now sign in.' });
+  } catch (error) {
+    console.error('Password reset failed:', error);
+    return res.status(500).json({ success: false, message: 'Unable to reset the password.' });
   }
 };
 

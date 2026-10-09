@@ -42,6 +42,9 @@ export class Property {
   @Column('text', { name: 'agent_id', nullable: true })
   agentId: string | undefined;
 
+  @Column('text', { name: 'property_manager_id', nullable: true })
+  propertyManagerId: string | null | undefined;
+
   @Column('text', { name: 'development_id', nullable: true })
   developmentId: string | undefined;
 

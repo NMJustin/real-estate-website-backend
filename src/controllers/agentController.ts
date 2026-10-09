@@ -3,6 +3,19 @@ import { AppDataSource } from '../lib/typeorm.js';
 import { Agent } from '../entities/Agent.js';
 import { Property } from '../entities/Property.js';
 
+export const getAssignableAgents = async (_req: Request, res: Response, next: (error: unknown) => void) => {
+  try {
+    const agents = await AppDataSource.getRepository(Agent).find({
+      where: { isActive: true },
+      select: { id: true, name: true },
+      order: { name: 'ASC' },
+    });
+    return res.json({ success: true, data: agents });
+  } catch (error) {
+    return next(error);
+  }
+};
+
 export const getAgents = async (req: Request, res: Response, next: (error: unknown) => void) => {
   try {
     const agentRepo = AppDataSource.getRepository(Agent);

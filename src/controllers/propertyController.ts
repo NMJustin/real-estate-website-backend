@@ -215,9 +215,16 @@ export const getPropertiesByCategory = (req: Request, res: Response, next: (erro
 export const createProperty = async (req: Request, res: Response, next: (error: unknown) => void) => {
   try {
     const userId = req.user?.id;
-    const userRole = req.user?.role;
+    const userRole = req.user?.role?.toLowerCase();
 
     let propertyData = { ...req.body };
+
+    if (userRole === 'property_manager') {
+      if (!userId) return res.status(401).json({ success: false, message: 'Authentication required.' });
+      propertyData.propertyManagerId = userId;
+    } else if (userRole !== 'admin') {
+      delete propertyData.propertyManagerId;
+    }
 
     // If user is an agent, automatically assign the property to their agent profile
     if (userRole === 'agent' && userId) {
@@ -267,7 +274,10 @@ export const replaceProperty = async (req: Request, res: Response, next: (error:
     const propertyRepo = AppDataSource.getRepository(Property);
     const property = await propertyRepo.findOne({ where: { id: String(req.params.id) } });
     if (!property) return res.status(404).json({ success: false, message: 'Property not found' });
-    Object.assign(property, req.body);
+    const body = { ...req.body };
+    if (req.user?.role?.toLowerCase() === 'property_manager') body.propertyManagerId = req.user.id;
+    else if (req.user?.role?.toLowerCase() !== 'admin') delete body.propertyManagerId;
+    Object.assign(property, body);
     const updatedProperty = await propertyRepo.save(property);
     return res.json({ success: true, data: updatedProperty });
   } catch (error) {
@@ -280,7 +290,10 @@ export const updateProperty = async (req: Request, res: Response, next: (error: 
     const propertyRepo = AppDataSource.getRepository(Property);
     const property = await propertyRepo.findOne({ where: { id: String(req.params.id) } });
     if (!property) return res.status(404).json({ success: false, message: 'Property not found' });
-    Object.assign(property, req.body);
+    const body = { ...req.body };
+    if (req.user?.role?.toLowerCase() === 'property_manager') body.propertyManagerId = req.user.id;
+    else if (req.user?.role?.toLowerCase() !== 'admin') delete body.propertyManagerId;
+    Object.assign(property, body);
     const updatedProperty = await propertyRepo.save(property);
     return res.json({ success: true, data: updatedProperty });
   } catch (error) {

@@ -18,6 +18,7 @@ import { Inquiry } from './Inquiry.js';
 import { ListingRequest } from './ListingRequest.js';
 import { ValuationRequest } from './ValuationRequest.js';
 import { ViewingRequest } from './ViewingRequest.js';
+import { User } from './User.js';
 
 @Entity('properties')
 export class Property {
@@ -135,6 +136,10 @@ export class Property {
   @ManyToOne(() => Agent, (agent) => agent.properties)
   @JoinColumn({ name: 'agent_id' })
   agent: Agent;
+
+  @ManyToOne(() => User)
+  @JoinColumn({ name: 'property_manager_id' })
+  propertyManager: User;
 
   @ManyToOne(() => PropertyCategory, (category) => category.properties)
   @JoinColumn({ name: 'category_id' })

@@ -36,6 +36,7 @@ export const getAdminProperties = async (req: Request, res: Response, next: (err
 
     const qb = propertyRepo.createQueryBuilder('property')
       .leftJoinAndSelect('property.agent', 'agent')
+      .leftJoinAndSelect('property.propertyManager', 'propertyManager')
       .leftJoinAndSelect('property.category', 'category')
       .leftJoinAndSelect('property.propertyImages', 'propertyImages')
       .orderBy(isPropertyManager ? 'property.updatedAt' : 'property.createdAt', 'DESC')
@@ -66,6 +67,7 @@ export const getAdminProperties = async (req: Request, res: Response, next: (err
     const filteredData = data.map(p => ({
       ...p,
       agent: p.agent ? { id: p.agent.id, name: p.agent.name } : null,
+      propertyManager: p.propertyManager ? { id: p.propertyManager.id, name: p.propertyManager.name } : null,
       category: p.category ? { id: p.category.id, name: p.category.name } : null,
     }));
 
@@ -106,10 +108,21 @@ export const getAdminProperty = async (req: Request, res: Response, next: (error
     });
     if (!property) return res.status(404).json({ success: false, message: 'Property not found.' });
 
+    // Get property manager separately if assigned
+    let propertyManager = null;
+    if (property.propertyManagerId) {
+      const userRepo = AppDataSource.getRepository(User);
+      propertyManager = await userRepo.findOne({
+        where: { id: property.propertyManagerId },
+        select: { id: true, name: true },
+      });
+    }
+
     // Filter to only select specific fields
     const filteredProperty = {
       ...property,
       agent: property.agent ? { id: property.agent.id, name: property.agent.name } : null,
+      propertyManager: propertyManager ? { id: propertyManager.id, name: propertyManager.name } : null,
       category: property.category ? { id: property.category.id, name: property.category.name } : null,
       propertyImages: property.propertyImages ? property.propertyImages.sort((a, b) => a.displayOrder - b.displayOrder) : [],
     };
@@ -169,10 +182,21 @@ export const createAdminProperty = async (req: Request, res: Response, next: (er
         relations: { agent: true, category: true, propertyImages: true },
       });
 
+      // Get property manager separately if assigned
+      let propertyManager = null;
+      if (propertyWithRelations?.propertyManagerId) {
+        const userRepo = AppDataSource.getRepository(User);
+        propertyManager = await userRepo.findOne({
+          where: { id: propertyWithRelations.propertyManagerId },
+          select: { id: true, name: true },
+        });
+      }
+
       // Filter to only select specific fields
       const filteredProperty = propertyWithRelations ? {
         ...propertyWithRelations,
         agent: propertyWithRelations.agent ? { id: propertyWithRelations.agent.id, name: propertyWithRelations.agent.name } : null,
+        propertyManager: propertyManager ? { id: propertyManager.id, name: propertyManager.name } : null,
         category: propertyWithRelations.category ? { id: propertyWithRelations.category.id, name: propertyWithRelations.category.name } : null,
         propertyImages: propertyWithRelations.propertyImages ? propertyWithRelations.propertyImages.sort((a, b) => a.displayOrder - b.displayOrder) : [],
       } : propertyWithRelations;
@@ -238,10 +262,21 @@ const saveProperty = async (req: Request, res: Response, next: (error: unknown) 
         relations: { agent: true, category: true, propertyImages: true },
       });
 
+      // Get property manager separately if assigned
+      let propertyManager = null;
+      if (propertyWithRelations?.propertyManagerId) {
+        const userRepo = AppDataSource.getRepository(User);
+        propertyManager = await userRepo.findOne({
+          where: { id: propertyWithRelations.propertyManagerId },
+          select: { id: true, name: true },
+        });
+      }
+
       // Filter to only select specific fields
       const filteredProperty = propertyWithRelations ? {
         ...propertyWithRelations,
         agent: propertyWithRelations.agent ? { id: propertyWithRelations.agent.id, name: propertyWithRelations.agent.name } : null,
+        propertyManager: propertyManager ? { id: propertyManager.id, name: propertyManager.name } : null,
         category: propertyWithRelations.category ? { id: propertyWithRelations.category.id, name: propertyWithRelations.category.name } : null,
         propertyImages: propertyWithRelations.propertyImages ? propertyWithRelations.propertyImages.sort((a, b) => a.displayOrder - b.displayOrder) : [],
       } : propertyWithRelations;
@@ -273,10 +308,21 @@ export const deleteAdminProperty = async (req: Request, res: Response, next: (er
       relations: { agent: true, category: true, propertyImages: true },
     });
 
+    // Get property manager separately if assigned
+    let propertyManager = null;
+    if (propertyWithRelations?.propertyManagerId) {
+      const userRepo = AppDataSource.getRepository(User);
+      propertyManager = await userRepo.findOne({
+        where: { id: propertyWithRelations.propertyManagerId },
+        select: { id: true, name: true },
+      });
+    }
+
     // Filter to only select specific fields
     const filteredProperty = propertyWithRelations ? {
       ...propertyWithRelations,
       agent: propertyWithRelations.agent ? { id: propertyWithRelations.agent.id, name: propertyWithRelations.agent.name } : null,
+      propertyManager: propertyManager ? { id: propertyManager.id, name: propertyManager.name } : null,
       category: propertyWithRelations.category ? { id: propertyWithRelations.category.id, name: propertyWithRelations.category.name } : null,
       propertyImages: propertyWithRelations.propertyImages ? propertyWithRelations.propertyImages.sort((a, b) => a.displayOrder - b.displayOrder) : [],
     } : propertyWithRelations;

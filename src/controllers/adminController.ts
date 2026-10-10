@@ -416,3 +416,39 @@ export const getRoles = async (_req: Request, res: Response) => {
     return res.status(500).json({ success: false, message: 'Failed to fetch roles.' });
   }
 };
+
+export const getAssignablePropertyManagers = async (_req: Request, res: Response) => {
+  try {
+    const userRepo = AppDataSource.getRepository(User);
+    const roleRepo = AppDataSource.getRepository(Role);
+
+    const propertyManagerRole = await roleRepo.findOne({
+      where: { name: 'property_manager' },
+    });
+
+    if (!propertyManagerRole) {
+      return res.json({ success: true, data: [] });
+    }
+
+    const propertyManagers = await userRepo.find({
+      where: {
+        roleId: propertyManagerRole.id,
+        isActive: true,
+      },
+      relations: { role: true },
+      order: { name: 'ASC' },
+    });
+
+    const filteredManagers = propertyManagers.map((manager) => ({
+      id: manager.id,
+      name: manager.name || manager.email,
+      email: manager.email,
+      role: manager.role ? { name: normalizedRoleName(manager.role.name) } : null,
+    }));
+
+    return res.json({ success: true, data: filteredManagers });
+  } catch (error) {
+    console.error('Get assignable property managers error:', error);
+    return res.status(500).json({ success: false, message: 'Failed to fetch property managers.' });
+  }
+};

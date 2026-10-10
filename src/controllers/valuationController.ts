@@ -46,7 +46,7 @@ export const replaceValuation = async (req: Request, res: Response, next: (error
     const valuation = await valuationRepo.findOne({ where: { id: String(req.params.id) } });
     if (!valuation) return res.status(404).json({ success: false, message: 'Valuation not found' });
     for (const field of VALUATION_UPDATABLE_FIELDS) {
-      if (field in req.body) (valuation as Record<string, unknown>)[field] = req.body[field];
+      if (field in req.body) (valuation as unknown as Record<string, unknown>)[field] = req.body[field];
     }
     const updatedValuation = await valuationRepo.save(valuation);
     res.json({ success: true, data: updatedValuation });
@@ -61,7 +61,7 @@ export const updateValuation = async (req: Request, res: Response, next: (error:
     const valuation = await valuationRepo.findOne({ where: { id: String(req.params.id) } });
     if (!valuation) return res.status(404).json({ success: false, message: 'Valuation not found' });
     for (const field of VALUATION_UPDATABLE_FIELDS) {
-      if (field in req.body) (valuation as Record<string, unknown>)[field] = req.body[field];
+      if (field in req.body) (valuation as unknown as Record<string, unknown>)[field] = req.body[field];
     }
     const updatedValuation = await valuationRepo.save(valuation);
     res.json({ success: true, data: updatedValuation });

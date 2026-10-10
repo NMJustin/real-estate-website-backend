@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { createUser, getDashboard, getRoles, getUsers, updateUser, updateUserMediaPermission } from '../controllers/adminController.js';
+import { createUser, getDashboard, getRoles, getUsers, updateUser, updateUserMediaPermission, getAssignablePropertyManagers } from '../controllers/adminController.js';
 import { requireAuth } from '../middleware/auth.js';
 import { authorize } from '../middleware/authorize.js';
 import adminPropertyRoutes from './adminPropertyRoutes.js';
@@ -29,6 +29,7 @@ router.get('/users', getUsers);
 router.post('/users', createUser);
 router.patch('/users/:id', updateUser);
 router.get('/roles', getRoles);
+router.get('/property-managers', getAssignablePropertyManagers);
 router.patch('/users/:id/media-permission', updateUserMediaPermission);
 router.use('/properties', adminPropertyRoutes);
 router.use('/property-images', adminPropertyImageRoutes);

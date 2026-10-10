@@ -104,25 +104,15 @@ export const getAdminProperty = async (req: Request, res: Response, next: (error
     const propertyRepo = AppDataSource.getRepository(Property);
     const property = await propertyRepo.findOne({
       where: { id: String(req.params.id) },
-      relations: { agent: true, category: true, propertyImages: true },
+      relations: { agent: true, propertyManager: true, category: true, propertyImages: true },
     });
     if (!property) return res.status(404).json({ success: false, message: 'Property not found.' });
-
-    // Get property manager separately if assigned
-    let propertyManager = null;
-    if (property.propertyManagerId) {
-      const userRepo = AppDataSource.getRepository(User);
-      propertyManager = await userRepo.findOne({
-        where: { id: property.propertyManagerId },
-        select: { id: true, name: true },
-      });
-    }
 
     // Filter to only select specific fields
     const filteredProperty = {
       ...property,
       agent: property.agent ? { id: property.agent.id, name: property.agent.name } : null,
-      propertyManager: propertyManager ? { id: propertyManager.id, name: propertyManager.name } : null,
+      propertyManager: property.propertyManager ? { id: property.propertyManager.id, name: property.propertyManager.name } : null,
       category: property.category ? { id: property.category.id, name: property.category.name } : null,
       propertyImages: property.propertyImages ? property.propertyImages.sort((a, b) => a.displayOrder - b.displayOrder) : [],
     };
@@ -179,24 +169,14 @@ export const createAdminProperty = async (req: Request, res: Response, next: (er
 
       const propertyWithRelations = await propertyRepo.findOne({
         where: { id: savedProperty.id },
-        relations: { agent: true, category: true, propertyImages: true },
+        relations: { agent: true, propertyManager: true, category: true, propertyImages: true },
       });
-
-      // Get property manager separately if assigned
-      let propertyManager = null;
-      if (propertyWithRelations?.propertyManagerId) {
-        const userRepo = AppDataSource.getRepository(User);
-        propertyManager = await userRepo.findOne({
-          where: { id: propertyWithRelations.propertyManagerId },
-          select: { id: true, name: true },
-        });
-      }
 
       // Filter to only select specific fields
       const filteredProperty = propertyWithRelations ? {
         ...propertyWithRelations,
         agent: propertyWithRelations.agent ? { id: propertyWithRelations.agent.id, name: propertyWithRelations.agent.name } : null,
-        propertyManager: propertyManager ? { id: propertyManager.id, name: propertyManager.name } : null,
+        propertyManager: propertyWithRelations.propertyManager ? { id: propertyWithRelations.propertyManager.id, name: propertyWithRelations.propertyManager.name } : null,
         category: propertyWithRelations.category ? { id: propertyWithRelations.category.id, name: propertyWithRelations.category.name } : null,
         propertyImages: propertyWithRelations.propertyImages ? propertyWithRelations.propertyImages.sort((a, b) => a.displayOrder - b.displayOrder) : [],
       } : propertyWithRelations;
@@ -259,24 +239,14 @@ const saveProperty = async (req: Request, res: Response, next: (error: unknown) 
 
       const propertyWithRelations = await propertyRepo.findOne({
         where: { id: savedProperty.id },
-        relations: { agent: true, category: true, propertyImages: true },
+        relations: { agent: true, propertyManager: true, category: true, propertyImages: true },
       });
-
-      // Get property manager separately if assigned
-      let propertyManager = null;
-      if (propertyWithRelations?.propertyManagerId) {
-        const userRepo = AppDataSource.getRepository(User);
-        propertyManager = await userRepo.findOne({
-          where: { id: propertyWithRelations.propertyManagerId },
-          select: { id: true, name: true },
-        });
-      }
 
       // Filter to only select specific fields
       const filteredProperty = propertyWithRelations ? {
         ...propertyWithRelations,
         agent: propertyWithRelations.agent ? { id: propertyWithRelations.agent.id, name: propertyWithRelations.agent.name } : null,
-        propertyManager: propertyManager ? { id: propertyManager.id, name: propertyManager.name } : null,
+        propertyManager: propertyWithRelations.propertyManager ? { id: propertyWithRelations.propertyManager.id, name: propertyWithRelations.propertyManager.name } : null,
         category: propertyWithRelations.category ? { id: propertyWithRelations.category.id, name: propertyWithRelations.category.name } : null,
         propertyImages: propertyWithRelations.propertyImages ? propertyWithRelations.propertyImages.sort((a, b) => a.displayOrder - b.displayOrder) : [],
       } : propertyWithRelations;
@@ -305,24 +275,14 @@ export const deleteAdminProperty = async (req: Request, res: Response, next: (er
 
     const propertyWithRelations = await propertyRepo.findOne({
       where: { id: savedProperty.id },
-      relations: { agent: true, category: true, propertyImages: true },
+      relations: { agent: true, propertyManager: true, category: true, propertyImages: true },
     });
-
-    // Get property manager separately if assigned
-    let propertyManager = null;
-    if (propertyWithRelations?.propertyManagerId) {
-      const userRepo = AppDataSource.getRepository(User);
-      propertyManager = await userRepo.findOne({
-        where: { id: propertyWithRelations.propertyManagerId },
-        select: { id: true, name: true },
-      });
-    }
 
     // Filter to only select specific fields
     const filteredProperty = propertyWithRelations ? {
       ...propertyWithRelations,
       agent: propertyWithRelations.agent ? { id: propertyWithRelations.agent.id, name: propertyWithRelations.agent.name } : null,
-      propertyManager: propertyManager ? { id: propertyManager.id, name: propertyManager.name } : null,
+      propertyManager: propertyWithRelations.propertyManager ? { id: propertyWithRelations.propertyManager.id, name: propertyWithRelations.propertyManager.name } : null,
       category: propertyWithRelations.category ? { id: propertyWithRelations.category.id, name: propertyWithRelations.category.name } : null,
       propertyImages: propertyWithRelations.propertyImages ? propertyWithRelations.propertyImages.sort((a, b) => a.displayOrder - b.displayOrder) : [],
     } : propertyWithRelations;

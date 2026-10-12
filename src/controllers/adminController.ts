@@ -406,6 +406,38 @@ export const updateUserMediaPermission = async (req: Request, res: Response) => 
   }
 };
 
+export const deleteUser = async (req: Request, res: Response) => {
+  try {
+    const userId = String(req.params.id);
+    
+    // Prevent deletion of own account
+    if (userId === req.user?.id) {
+      return res.status(400).json({ success: false, message: 'You cannot delete your own account.' });
+    }
+
+    const userRepo = AppDataSource.getRepository(User);
+    const user = await userRepo.findOne({ 
+      where: { id: userId }, 
+      relations: { role: true } 
+    });
+    
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found.' });
+    }
+
+    // Prevent deletion of other admins (optional security measure)
+    if (user.role?.name.toLowerCase() === 'admin') {
+      return res.status(403).json({ success: false, message: 'Admin accounts cannot be deleted.' });
+    }
+
+    await userRepo.remove(user);
+    return res.json({ success: true, message: 'User deleted successfully.' });
+  } catch (error) {
+    console.error('Delete user error:', error);
+    return res.status(500).json({ success: false, message: 'Failed to delete user.' });
+  }
+};
+
 export const getRoles = async (_req: Request, res: Response) => {
   try {
     const roleRepo = AppDataSource.getRepository(Role);

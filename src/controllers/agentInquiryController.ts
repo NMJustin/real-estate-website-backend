@@ -15,6 +15,7 @@ export const getAgentInquiries = async (req: Request, res: Response, next: (erro
 
     const agentRepo = AppDataSource.getRepository(Agent);
     const inquiryRepo = AppDataSource.getRepository(Inquiry);
+    const noteRepo = AppDataSource.getRepository(AgentInquiryNote);
 
     const agent = await agentRepo.findOne({ where: { userId } });
     if (!agent) {
@@ -26,7 +27,8 @@ export const getAgentInquiries = async (req: Request, res: Response, next: (erro
       relations: { property: true },
       order: { createdAt: 'DESC' },
     });
-    const notes = await AppDataSource.getRepository(AgentInquiryNote).find({ where: { agentId: agent.id } });
+
+    const notes = await noteRepo.find({ where: { agentId: agent.id } });
     const notesByInquiryId = new Map(notes.map((note) => [note.inquiryId, note]));
 
     // Filter property to only select specific fields
@@ -39,7 +41,8 @@ export const getAgentInquiries = async (req: Request, res: Response, next: (erro
 
     res.json({ success: true, data: filteredInquiries });
   } catch (error) {
-    next(error);
+    console.error('Error fetching agent inquiries:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch inquiries. Please try again later.' });
   }
 };
 
@@ -76,7 +79,8 @@ export const getAgentInquiry = async (req: Request, res: Response, next: (error:
 
     res.json({ success: true, data: filteredInquiry });
   } catch (error) {
-    next(error);
+    console.error('Error fetching agent inquiry:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch inquiry. Please try again later.' });
   }
 };
 
@@ -125,7 +129,8 @@ export const updateInquiryStatus = async (req: Request, res: Response, next: (er
 
     res.json({ success: true, data: filteredInquiry });
   } catch (error) {
-    next(error);
+    console.error('Error updating inquiry status:', error);
+    res.status(500).json({ success: false, message: 'Failed to update inquiry status. Please try again later.' });
   }
 };
 
@@ -177,6 +182,7 @@ export const updateInquiryFollowUp = async (req: Request, res: Response, next: (
     const savedNote = await noteRepo.save(note);
     return res.json({ success: true, data: savedNote });
   } catch (error) {
-    next(error);
+    console.error('Error updating inquiry follow-up:', error);
+    res.status(500).json({ success: false, message: 'Failed to update follow-up. Please try again later.' });
   }
 };

@@ -8,11 +8,19 @@ import type { DeepPartial } from 'typeorm';
 const toSlug = (value: string) => value.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
 const optionalString = (value: unknown) => typeof value === 'string' && value.trim() ? value.trim() : undefined;
 const optionalNumber = (value: unknown) => value === '' || value === undefined || value === null || !Number.isFinite(Number(value)) ? undefined : Number(value);
-const imageData = (images: unknown) => Array.isArray(images)
-  ? images.map((value) => typeof value === 'string' ? { url: value, mediaType: 'IMAGE' } : value)
-    .filter((value): value is { url: string; mediaType?: string } => typeof value === 'object' && value !== null && typeof value.url === 'string' && value.url.trim().length > 0)
-    .map((value, index) => ({ imageUrl: value.url.trim(), mediaType: value.mediaType === 'VIDEO' ? 'VIDEO' : 'IMAGE', displayOrder: index, isPrimary: index === 0 }))
-  : [];
+const imageData = (images: unknown) => {
+  if (!Array.isArray(images)) return [];
+  const valid = images
+    .map((value) => typeof value === 'string' ? { url: value, mediaType: 'IMAGE', isPrimary: false } : value)
+    .filter((value): value is { url: string; mediaType?: string; isPrimary?: boolean } => typeof value === 'object' && value !== null && typeof value.url === 'string' && value.url.trim().length > 0);
+  const hasExplicitPrimary = valid.some((item) => Boolean(item.isPrimary));
+  return valid.map((value, index) => ({
+    imageUrl: value.url.trim(),
+    mediaType: value.mediaType === 'VIDEO' ? 'VIDEO' : 'IMAGE',
+    displayOrder: index,
+    isPrimary: hasExplicitPrimary ? Boolean(value.isPrimary) : index === 0,
+  }));
+};
 
 const buildPropertyData = (body: Record<string, unknown>) => ({
   title: String(body.title || '').trim(), description: optionalString(body.description) || undefined, categoryId: optionalString(body.categoryId), agentId: optionalString(body.agentId),

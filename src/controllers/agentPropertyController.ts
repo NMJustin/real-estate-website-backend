@@ -101,7 +101,8 @@ export const getAgentProperties = async (req: Request, res: Response, next: (err
 
     res.json({ success: true, data: filteredProperties });
   } catch (error) {
-    next(error);
+    console.error('Error fetching agent properties:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch properties. Please try again later.' });
   }
 };
 
@@ -139,7 +140,8 @@ export const getAgentProperty = async (req: Request, res: Response, next: (error
 
     res.json({ success: true, data: sortedProperty });
   } catch (error) {
-    next(error);
+    console.error('Error fetching agent property:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch property. Please try again later.' });
   }
 };
 
@@ -208,10 +210,11 @@ export const updateAgentProperty = async (req: Request, res: Response, next: (er
 
     res.json({ success: true, data: sortedProperty });
   } catch (error) {
+    console.error('Error updating agent property:', error);
     if (error instanceof Error && /^(Invalid value|Property title|Invalid property|Amenities|Images|Every image)/.test(error.message)) {
       return res.status(400).json({ success: false, message: error.message });
     }
-    next(error);
+    res.status(500).json({ success: false, message: 'Failed to update property. Please try again later.' });
   }
 };
 
@@ -231,6 +234,7 @@ export const archiveAgentProperty = async (req: Request, res: Response, next: (e
     await propertyRepo.save(property);
     return res.json({ success: true, message: 'Assigned property archived.' });
   } catch (error) {
-    return next(error);
+    console.error('Error archiving agent property:', error);
+    return res.status(500).json({ success: false, message: 'Failed to archive property. Please try again later.' });
   }
 };

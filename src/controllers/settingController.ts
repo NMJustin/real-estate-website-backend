@@ -1,4 +1,5 @@
 import type { Request, Response } from 'express';
+import { randomUUID } from 'node:crypto';
 import { AppDataSource } from '../lib/typeorm.js';
 import { SiteSetting } from '../entities/SiteSetting.js';
 
@@ -9,10 +10,11 @@ export const getSettings = async (_req: Request, res: Response, next: (error: un
 
     if (!settings) {
       settings = settingRepo.create({
+        id: randomUUID(),
         siteName: 'Ingata Real Estate',
-        email: 'ingatatechnologiesltd@gmail.com',
+        email: 'justinnizeyumuremyi20@gmail.com',
         phone: '+250 796 593 119',
-        whatsapp: '+250796593119',
+        whatsapp: '0781830071',
         address: 'KG 11 Ave, Zindiro, AZAM Rond Point, Gasabo-Kigali',
         facebookUrl: 'https://facebook.com',
         xUrl: 'https://twitter.com',
@@ -58,7 +60,7 @@ export const updateSettings = async (req: Request, res: Response, next: (error: 
       Object.assign(settings, updatedValues);
       settings = await settingRepo.save(settings);
     } else {
-      settings = settingRepo.create(updatedValues);
+      settings = settingRepo.create({ id: randomUUID(), ...updatedValues });
       settings = await settingRepo.save(settings);
     }
 

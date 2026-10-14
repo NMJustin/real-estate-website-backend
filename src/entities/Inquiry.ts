@@ -35,7 +35,7 @@ export class Inquiry {
   phone: string | undefined;
 
   @Column('text')
-  message: string;
+  inquiry: string;
 
   @Column('text', { default: 'NEW' })
   status: string;

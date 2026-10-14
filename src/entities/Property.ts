@@ -19,6 +19,8 @@ import { ListingRequest } from './ListingRequest.js';
 import { ValuationRequest } from './ValuationRequest.js';
 import { ViewingRequest } from './ViewingRequest.js';
 import { User } from './User.js';
+import { PropertyView } from './PropertyView.js';
+import { ClickEvent } from './ClickEvent.js';
 
 @Entity('properties')
 export class Property {
@@ -169,4 +171,10 @@ export class Property {
 
   @OneToMany(() => ViewingRequest, (request) => request.property)
   viewingRequests: ViewingRequest[];
+
+  @OneToMany(() => PropertyView, (propertyView) => propertyView.property)
+  propertyViews: PropertyView[];
+
+  @OneToMany(() => ClickEvent, (clickEvent) => clickEvent.property)
+  clickEvents: ClickEvent[];
 }

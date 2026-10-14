@@ -19,6 +19,9 @@ import { PropertySearch } from './PropertySearch.js';
 import { ServiceRequest } from './ServiceRequest.js';
 import { ValuationRequest } from './ValuationRequest.js';
 import { ViewingRequest } from './ViewingRequest.js';
+import { PageView } from './PageView.js';
+import { PropertyView } from './PropertyView.js';
+import { ClickEvent } from './ClickEvent.js';
 
 @Entity('users')
 export class User {
@@ -94,4 +97,13 @@ export class User {
 
   @OneToMany(() => ViewingRequest, (request) => request.user)
   viewingRequests: ViewingRequest[];
+
+  @OneToMany(() => PageView, (pageView) => pageView.user)
+  pageViews: PageView[];
+
+  @OneToMany(() => PropertyView, (propertyView) => propertyView.user)
+  propertyViews: PropertyView[];
+
+  @OneToMany(() => ClickEvent, (clickEvent) => clickEvent.user)
+  clickEvents: ClickEvent[];
 }

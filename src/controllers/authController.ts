@@ -143,10 +143,9 @@ export const forgotPassword = async (req: Request, res: Response) => {
       return res.json({ success: true, message: PASSWORD_RESET_RESPONSE });
     }
 
-    if (user.passwordResetExpiresAt && user.passwordResetExpiresAt.getTime() > Date.now()) {
-      return res.json({ success: true, message: PASSWORD_RESET_RESPONSE });
-    }
-
+    // Always replace an existing token and send a fresh link. Returning success
+    // without sending anything leaves a user stranded if the earlier email was
+    // delayed, filtered, or deleted.
     const token = randomBytes(32).toString('hex');
     user.passwordResetTokenHash = hashResetToken(token);
     user.passwordResetExpiresAt = new Date(Date.now() + PASSWORD_RESET_TTL_MS);

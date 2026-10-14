@@ -100,4 +100,5 @@ export class SiteSetting {
 
   @Column('text', { nullable: true })
   whatsapp: string | undefined;
+
 }

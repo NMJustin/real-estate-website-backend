@@ -35,7 +35,8 @@ export const getAgentViewings = async (req: Request, res: Response, next: (error
 
     res.json({ success: true, data: filteredViewings });
   } catch (error) {
-    next(error);
+    console.error('Error fetching agent viewings:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch viewings. Please try again later.' });
   }
 };
 
@@ -72,7 +73,8 @@ export const getAgentViewing = async (req: Request, res: Response, next: (error:
 
     res.json({ success: true, data: filteredViewing });
   } catch (error) {
-    next(error);
+    console.error('Error fetching agent viewing:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch viewing. Please try again later.' });
   }
 };
 
@@ -123,7 +125,8 @@ export const scheduleViewing = async (req: Request, res: Response, next: (error:
 
     res.status(201).json({ success: true, data: filteredViewing });
   } catch (error) {
-    next(error);
+    console.error('Error scheduling viewing:', error);
+    res.status(500).json({ success: false, message: 'Failed to schedule viewing. Please try again later.' });
   }
 };
 
@@ -194,6 +197,7 @@ export const updateViewingStatus = async (req: Request, res: Response, next: (er
 
     res.json({ success: true, data: filteredViewing });
   } catch (error) {
-    next(error);
+    console.error('Error updating viewing status:', error);
+    res.status(500).json({ success: false, message: 'Failed to update viewing. Please try again later.' });
   }
 };

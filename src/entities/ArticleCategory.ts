@@ -22,11 +22,17 @@ export class ArticleCategory {
   @Column('text', { nullable: true })
   description: string | undefined;
 
+  @Column('boolean', { name: 'is_active', default: true })
+  isActive: boolean;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
+
+  @Column('text', { name: 'image_url', nullable: true })
+  imageUrl: string | undefined;
 
   @OneToMany(() => Article, (article) => article.category)
   articles: Article[];

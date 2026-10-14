@@ -13,6 +13,7 @@ import testimonialRoutes from './testimonialRoutes.js';
 import contactRoutes from './contactRoutes.js';
 import adminRoutes from './adminRoutes.js';
 import categoryRoutes from './categoryRoutes.js';
+import articleCategoryRoutes from './articleCategoryRoutes.js';
 import listingRoutes from './listingRoutes.js';
 import favoriteRoutes from './favoriteRoutes.js';
 import pageRoutes from './pageRoutes.js';
@@ -24,6 +25,7 @@ import propertyManagerInquiryRoutes from './propertyManagerInquiryRoutes.js';
 import propertyManagerViewingRoutes from './propertyManagerViewingRoutes.js';
 import propertyManagerListingRoutes from './propertyManagerListingRoutes.js';
 import contentEditorRoutes from './contentEditorRoutes.js';
+import analyticsRoutes from './analyticsRoutes.js';
 
 const router = Router();
 
@@ -36,6 +38,7 @@ router.use('/properties', propertyRoutes);
 router.use('/property-searches', propertySearchRoutes);
 router.use('/property-media', propertyMediaRoutes);
 router.use('/categories', categoryRoutes);
+router.use('/article-categories', articleCategoryRoutes);
 router.use('/agents', publicAgentRoutes);
 router.use('/agent-dashboard', agentDashboardRoutes);
 router.use('/services', serviceRoutes);
@@ -56,5 +59,6 @@ router.use('/property-manager/inquiries', propertyManagerInquiryRoutes);
 router.use('/property-manager/viewings', propertyManagerViewingRoutes);
 router.use('/property-manager', propertyManagerRoutes);
 router.use('/content-editor', contentEditorRoutes);
+router.use('/analytics', analyticsRoutes);
 
 export default router;

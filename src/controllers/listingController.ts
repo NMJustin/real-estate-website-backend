@@ -262,7 +262,30 @@ export const updateListing = async (req: Request, res: Response, next: (error: u
     const listingRepo = AppDataSource.getRepository(ListingRequest);
     const listing = await listingRepo.findOne({ where: { id: String(req.params.id) } });
     if (!listing) return res.status(404).json({ success: false, message: 'Listing request not found' });
-    Object.assign(listing, req.body);
+    if (!['PENDING', 'SUBMITTED'].includes(listing.status)) {
+      return res.status(409).json({ success: false, message: 'Only pending listing requests can be edited.' });
+    }
+    const body = req.body as Record<string, unknown>;
+    const textFields = ['propertyType', 'transactionType', 'location', 'district', 'sector', 'sizeUnit', 'description'] as const;
+    for (const field of textFields) {
+      if (body[field] === undefined) continue;
+      if (body[field] !== null && typeof body[field] !== 'string') {
+        return res.status(400).json({ success: false, message: `Invalid ${field}.` });
+      }
+      const value = typeof body[field] === 'string' ? body[field].trim() : undefined;
+      if (['propertyType', 'transactionType', 'location'].includes(field) && !value) {
+        return res.status(400).json({ success: false, message: `${field} is required.` });
+      }
+      (listing as unknown as Record<string, unknown>)[field] = value || undefined;
+    }
+    for (const field of ['propertySize', 'bedrooms', 'bathrooms', 'price'] as const) {
+      if (body[field] === undefined) continue;
+      const value = optionalNumber(body[field]);
+      if (body[field] !== null && body[field] !== '' && value === undefined) {
+        return res.status(400).json({ success: false, message: `Invalid ${field}.` });
+      }
+      (listing as unknown as Record<string, unknown>)[field] = value;
+    }
     const updatedListing = await listingRepo.save(listing);
     res.json({ success: true, data: updatedListing });
   } catch (error) {

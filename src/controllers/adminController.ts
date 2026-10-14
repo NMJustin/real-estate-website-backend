@@ -162,7 +162,7 @@ export const getDashboard = async (_req: Request, res: Response) => {
       name: i.name,
       email: i.email,
       phone: i.phone,
-      message: i.message,
+      inquiry: i.inquiry,
       status: i.status,
       createdAt: i.createdAt,
       property: i.property ? { title: i.property.title, slug: i.property.slug } : null,

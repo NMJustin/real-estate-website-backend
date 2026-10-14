@@ -56,11 +56,8 @@ export const getManagedViewings = async (req: Request, res: Response, next: (err
     const { page, limit } = paging(req);
     const query = AppDataSource.getRepository(ViewingRequest).createQueryBuilder('viewing')
       .leftJoinAndSelect('viewing.property', 'property')
-      .orderBy(
-        `CASE WHEN viewing.preferredDate >= CURRENT_TIMESTAMP AND viewing.status IN ('PENDING', 'SCHEDULED', 'CONFIRMED') THEN 0 ELSE 1 END`,
-        'ASC',
-      )
-      .addOrderBy('viewing.preferredDate', 'ASC', 'NULLS LAST');
+      .orderBy('viewing.preferredDate', 'ASC', 'NULLS LAST')
+      .addOrderBy('viewing.createdAt', 'DESC');
     if (managerId(req)) query.andWhere('property.propertyManagerId = :propertyManagerId', { propertyManagerId: managerId(req) });
 
     const [data, total] = await query

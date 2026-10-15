@@ -30,6 +30,12 @@ services:
         sync: false
       - key: EMAIL_FROM
         sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SECRET_KEY
+        sync: false
+      - key: SUPABASE_PROPERTY_MEDIA_BUCKET
+        value: property-media
 
 databases:
   - name: ingata-postgres

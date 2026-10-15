@@ -1,0 +1,8 @@
+{
+  "buildCommand": "cd frontend && npm run build",
+  "installCommand": "cd frontend && npm install",
+  "framework": null,
+  "env": {
+    "NEXT_PUBLIC_API_URL": "https://ingata-backend.onrender.com/api/v1"
+  }
+}

@@ -6,6 +6,7 @@ import { AppDataSource } from '../lib/typeorm.js';
 import { User } from '../entities/User.js';
 import { Role } from '../entities/Role.js';
 import { isPasswordResetEmailConfigured, sendPasswordResetEmail } from '../lib/passwordResetEmail.js';
+import crypto from 'node:crypto';
 
 const JWT_SECRET = process.env.JWT_SECRET as string;
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
@@ -326,5 +327,86 @@ export const updateProfile = async (req: Request, res: Response) => {
     });
   } catch (error) {
     return res.status(500).json({ success: false, message: 'Internal server error.' });
+  }
+};
+
+// ─── Seed Admin User (TEMPORARY - REMOVE AFTER USE) ───────────────────────────
+export const seedAdminUser = async (req: Request, res: Response) => {
+  try {
+    const { secret } = req.body;
+
+    // Simple secret protection to prevent unauthorized access
+    const SEED_SECRET = process.env.SEED_SECRET || 'ingata-seed-2026';
+    if (secret !== SEED_SECRET) {
+      return res.status(403).json({ success: false, message: 'Invalid secret key.' });
+    }
+
+    const roleRepo = AppDataSource.getRepository(Role);
+    const userRepo = AppDataSource.getRepository(User);
+
+    // 1. Upsert roles
+    const roleNames = [
+      { name: 'admin', description: 'Full system access' },
+      { name: 'user', description: 'Standard user access' },
+      { name: 'agent', description: 'Agent user access' },
+      { name: 'property_owner', description: 'Property owner with admin-approved media upload access' },
+      { name: 'property_manager', description: 'Property manager with listing and inquiry management access' },
+      { name: 'content_editor', description: 'Content editor with article and page management access' },
+    ];
+
+    let adminRole: Role | null = null;
+
+    for (const roleData of roleNames) {
+      let role = await roleRepo.findOne({ where: { name: roleData.name } });
+      if (!role) {
+        role = roleRepo.create(roleData);
+        await roleRepo.save(role);
+      }
+
+      if (roleData.name === 'admin') {
+        adminRole = role;
+      }
+    }
+
+    if (!adminRole) {
+      return res.status(500).json({ success: false, message: 'Failed to create admin role.' });
+    }
+
+    // 2. Create/reset admin user
+    const adminEmail = 'admin@ingata.com';
+    const adminPassword = 'Admin@2026!';
+
+    const existing = await userRepo.findOne({ where: { email: adminEmail } });
+
+    if (existing) {
+      existing.passwordHash = await bcrypt.hash(adminPassword, 12);
+      existing.roleId = adminRole.id;
+      existing.isActive = true;
+      await userRepo.save(existing);
+    } else {
+      const passwordHash = await bcrypt.hash(adminPassword, 12);
+      const adminUser = userRepo.create({
+        id: crypto.randomUUID(),
+        name: 'Super Admin',
+        email: adminEmail,
+        passwordHash,
+        roleId: adminRole.id,
+        isActive: true,
+      });
+      await userRepo.save(adminUser);
+    }
+
+    return res.json({
+      success: true,
+      message: 'Admin user seeded successfully.',
+      data: {
+        email: adminEmail,
+        password: adminPassword,
+        note: 'Please change this password after first login and remove this endpoint.',
+      },
+    });
+  } catch (error) {
+    console.error('Seed admin error:', error);
+    return res.status(500).json({ success: false, message: 'Failed to seed admin user.' });
   }
 };

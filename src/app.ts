@@ -9,6 +9,7 @@ const app = express();
 const allowedOrigins = [
   process.env.FRONTEND_URL || 'http://localhost:3000',
   'http://localhost:3000',
+  'https://ingata-real-estate.vercel.app',
 ];
 
 app.use(cors({

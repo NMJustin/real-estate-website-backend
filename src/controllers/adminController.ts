@@ -125,7 +125,7 @@ export const getDashboard = async (_req: Request, res: Response) => {
       propertyRepo.count({ where: { publicationStatus: 'PUBLISHED', status: 'AVAILABLE' } }),
       agentRepo.count({ where: { isActive: true } }),
       userRepo.count({ where: { isActive: true } }),
-      inquiryRepo.count({ where: { status: 'PENDING' } }),
+      inquiryRepo.count({ where: { status: 'NEW' } }), // Count NEW inquiries as pending
       inquiryRepo.count(),
       viewingRepo.count({ where: { status: 'PENDING' } }),
       viewingRepo.count(),
@@ -162,7 +162,7 @@ export const getDashboard = async (_req: Request, res: Response) => {
       name: i.name,
       email: i.email,
       phone: i.phone,
-      inquiry: i.inquiry,
+      message: i.inquiry, // Map database field 'inquiry' to frontend field 'message'
       status: i.status,
       createdAt: i.createdAt,
       property: i.property ? { title: i.property.title, slug: i.property.slug } : null,

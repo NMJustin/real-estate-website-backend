@@ -10,6 +10,7 @@ const allowedInquiryStatuses = new Set(['NEW', 'PENDING', 'READ', 'CONTACTED', '
 
 const serializeInquiry = (inquiry: Inquiry, note?: AgentInquiryNote) => ({
   ...inquiry,
+  message: inquiry.inquiry, // Map database field 'inquiry' to frontend field 'message'
   property: inquiry.property ? { id: inquiry.property.id, title: inquiry.property.title, slug: inquiry.property.slug } : null,
   agent: inquiry.agent ? { id: inquiry.agent.id, name: inquiry.agent.name, email: inquiry.agent.email } : null,
   privateNotes: note?.notes || '',
@@ -62,10 +63,46 @@ export const getInquiries = async (req: Request, res: Response, next: (error: un
 
 export const createInquiry = async (req: Request, res: Response, next: (error: unknown) => void) => {
   try {
+    const { name, email, phone, propertyId, message } = req.body as Record<string, unknown>;
+
+    // Validation
+    if (!name || typeof name !== 'string' || !name.trim()) {
+      return res.status(400).json({ success: false, message: 'Name is required.' });
+    }
+    if (!email || typeof email !== 'string' || !email.trim()) {
+      return res.status(400).json({ success: false, message: 'Email is required.' });
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim())) {
+      return res.status(400).json({ success: false, message: 'Please enter a valid email address.' });
+    }
+    if (!message || typeof message !== 'string' || !message.trim()) {
+      return res.status(400).json({ success: false, message: 'Message is required.' });
+    }
+
+    // Duplicate prevention (same email, same property, within last 5 minutes)
     const inquiryRepo = AppDataSource.getRepository(Inquiry);
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+    const whereConditions: Record<string, unknown> = { email: email.trim() };
+    if (propertyId) {
+      whereConditions.propertyId = String(propertyId);
+    }
+    const duplicate = await inquiryRepo.findOne({
+      where: whereConditions,
+      order: { createdAt: 'DESC' },
+    });
+    if (duplicate && duplicate.createdAt > fiveMinutesAgo) {
+      return res.status(429).json({ success: false, message: 'You have already submitted an inquiry recently. Please wait a few minutes before trying again.' });
+    }
+
     const inquiry = inquiryRepo.create({
-      ...req.body,
-      propertyId: req.body.propertyId ? String(req.body.propertyId) : undefined,
+      id: randomUUID(),
+      name: name.trim(),
+      email: email.trim(),
+      phone: phone ? String(phone).trim() : undefined,
+      propertyId: propertyId ? String(propertyId) : undefined,
+      inquiry: message.trim(),
+      status: 'NEW',
     });
     const savedInquiry = await inquiryRepo.save(inquiry);
     res.status(201).json({ success: true, data: savedInquiry });

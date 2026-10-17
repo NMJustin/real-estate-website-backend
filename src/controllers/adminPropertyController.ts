@@ -25,6 +25,7 @@ const imageData = (images: unknown) => {
 const buildPropertyData = (body: Record<string, unknown>) => ({
   title: String(body.title || '').trim(), description: optionalString(body.description) || undefined, categoryId: optionalString(body.categoryId), agentId: optionalString(body.agentId),
   propertyManagerId: body.propertyManagerId === null || body.propertyManagerId === '' ? null : optionalString(body.propertyManagerId),
+  developmentId: optionalString(body.developmentId),
   propertyType: String(body.propertyType || 'RESIDENTIAL'), transactionType: String(body.transactionType || 'SALE'), price: optionalNumber(body.price), currency: optionalString(body.currency) || 'RWF',
   location: optionalString(body.location), district: optionalString(body.district), sector: optionalString(body.sector), address: optionalString(body.address), neighborhood: optionalString(body.neighborhood), area: optionalString(body.area),
   nearbyLandmarks: optionalString(body.nearbyLandmarks), locationDescription: optionalString(body.locationDescription), latitude: optionalNumber(body.latitude), longitude: optionalNumber(body.longitude),
@@ -46,6 +47,7 @@ export const getAdminProperties = async (req: Request, res: Response, next: (err
       .leftJoinAndSelect('property.agent', 'agent')
       .leftJoinAndSelect('property.propertyManager', 'propertyManager')
       .leftJoinAndSelect('property.category', 'category')
+      .leftJoinAndSelect('property.development', 'development')
       .leftJoinAndSelect('property.propertyImages', 'propertyImages')
       .orderBy(isPropertyManager ? 'property.updatedAt' : 'property.createdAt', 'DESC')
       .skip((page - 1) * limit)
@@ -77,6 +79,7 @@ export const getAdminProperties = async (req: Request, res: Response, next: (err
       agent: p.agent ? { id: p.agent.id, name: p.agent.name } : null,
       propertyManager: p.propertyManager ? { id: p.propertyManager.id, name: p.propertyManager.name } : null,
       category: p.category ? { id: p.category.id, name: p.category.name } : null,
+      development: p.development ? { id: p.development.id, name: p.development.name } : null,
     }));
 
     const response: Record<string, unknown> = {
@@ -112,7 +115,7 @@ export const getAdminProperty = async (req: Request, res: Response, next: (error
     const propertyRepo = AppDataSource.getRepository(Property);
     const property = await propertyRepo.findOne({
       where: { id: String(req.params.id) },
-      relations: { agent: true, propertyManager: true, category: true, propertyImages: true },
+      relations: { agent: true, propertyManager: true, category: true, development: true, propertyImages: true },
     });
     if (!property) return res.status(404).json({ success: false, message: 'Property not found.' });
 
@@ -122,6 +125,7 @@ export const getAdminProperty = async (req: Request, res: Response, next: (error
       agent: property.agent ? { id: property.agent.id, name: property.agent.name } : null,
       propertyManager: property.propertyManager ? { id: property.propertyManager.id, name: property.propertyManager.name } : null,
       category: property.category ? { id: property.category.id, name: property.category.name } : null,
+      development: property.development ? { id: property.development.id, name: property.development.name } : null,
       propertyImages: property.propertyImages ? property.propertyImages.sort((a, b) => a.displayOrder - b.displayOrder) : [],
     };
 

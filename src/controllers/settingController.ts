@@ -39,7 +39,7 @@ export const updateSettings = async (req: Request, res: Response, next: (error: 
       heroTitle, heroSubtitle, heroCtaText, heroCtaLink, aboutTitle,
       aboutDescription, aboutCtaText, aboutCtaLink, servicesTitle,
       servicesDescription, featuredSectionTitle, showAboutSection,
-      showFeaturedSection, showServicesSection,
+      showFeaturedSection, showServicesSection, analyticsRetentionDays,
     } = req.body;
     const settingValues = {
       siteName, logoUrl, faviconUrl, email, phone, whatsapp, address,
@@ -47,7 +47,7 @@ export const updateSettings = async (req: Request, res: Response, next: (error: 
       heroTitle, heroSubtitle, heroCtaText, heroCtaLink, aboutTitle,
       aboutDescription, aboutCtaText, aboutCtaLink, servicesTitle,
       servicesDescription, featuredSectionTitle, showAboutSection,
-      showFeaturedSection, showServicesSection,
+      showFeaturedSection, showServicesSection, analyticsRetentionDays,
     };
     const updatedValues = Object.fromEntries(
       Object.entries(settingValues).filter(([, value]) => value !== undefined),

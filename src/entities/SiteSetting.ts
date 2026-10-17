@@ -101,4 +101,7 @@ export class SiteSetting {
   @Column('text', { nullable: true })
   whatsapp: string | undefined;
 
+  @Column('integer', { name: 'analytics_retention_days', default: 365 })
+  analyticsRetentionDays: number;
+
 }

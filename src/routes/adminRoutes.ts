@@ -19,6 +19,9 @@ import adminPageRoutes from './adminPageRoutes.js';
 import adminPropertyImageRoutes from './adminPropertyImageRoutes.js';
 import adminFeaturedPropertyRoutes from './adminFeaturedPropertyRoutes.js';
 import adminHomepageContentRoutes from './adminHomepageContentRoutes.js';
+import adminPropertyFeatureRoutes from './adminPropertyFeatureRoutes.js';
+import adminDevelopmentRoutes from './adminDevelopmentRoutes.js';
+import { cleanupAnalyticsData, getAnalyticsRetentionStatus } from '../controllers/analyticsCleanupController.js';
 
 const router = Router();
 
@@ -37,6 +40,8 @@ router.use('/properties', adminPropertyRoutes);
 router.use('/property-images', adminPropertyImageRoutes);
 router.use('/featured-properties', adminFeaturedPropertyRoutes);
 router.use('/categories', adminCategoryRoutes);
+router.use('/property-features', adminPropertyFeatureRoutes);
+router.use('/developments', adminDevelopmentRoutes);
 router.use('/article-categories', adminArticleCategoryRoutes);
 router.use('/inquiries', adminInquiryRoutes);
 router.use('/viewings', adminViewingRoutes);
@@ -50,5 +55,7 @@ router.use('/pages', adminPageRoutes);
 router.use('/homepage', adminHomepageContentRoutes);
 router.use('/testimonials', testimonialRoutes);
 router.use('/settings', settingRoutes);
+router.post('/analytics/cleanup', cleanupAnalyticsData);
+router.get('/analytics/retention-status', getAnalyticsRetentionStatus);
 
 export default router;
